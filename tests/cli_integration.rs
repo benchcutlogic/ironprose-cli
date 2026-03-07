@@ -477,8 +477,8 @@ fn test_analyze_invalid_locale_exits_1() {
         .assert()
         .code(1)
         .stderr(
-            predicate::str::contains("unknown locale")
-                .and(predicate::str::contains("accepted locales")),
+            predicate::str::contains("Unknown locale")
+                .and(predicate::str::contains("Valid values")),
         );
 }
 
@@ -489,7 +489,7 @@ fn test_analyze_invalid_locale_shows_valid_values() {
         .assert()
         .code(1)
         .stderr(
-            predicate::str::contains("accepted locales")
+            predicate::str::contains("Valid values")
                 .and(predicate::str::contains("en-us"))
                 .and(predicate::str::contains("en-any")),
         );
