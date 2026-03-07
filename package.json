@@ -3,7 +3,8 @@
   "scripts": {
     "changeset": "changeset",
     "version-sync": "changeset version && ./scripts/sync-version.sh",
-    "tag-release": "./scripts/tag-release.sh"
+    "tag-release": "./scripts/tag-release.sh",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.0",
