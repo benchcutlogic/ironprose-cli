@@ -1,4 +1,5 @@
 ---
+"ironprose-cli": minor
 ---
 
 ### Agent-First CLI Optimization
