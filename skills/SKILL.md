@@ -1,14 +1,7 @@
 ---
 name: skills
 description: Fiction prose analysis — catch weak verbs, repetition, clichés, passive voice, and other craft issues in manuscripts
-metadata:
-  {
-    "openclaw":
-      {
-        "homepage": "https://github.com/benchcutlogic/ironprose-cli",
-        "requires": { "bins": ["ironprose"] },
-      },
-  }
+metadata: {"openclaw": {"homepage": "https://github.com/benchcutlogic/ironprose-cli", "requires": {"bins": ["ironprose"]}}}
 ---
 
 # IronProse CLI — Fiction Writing Assistant
@@ -66,14 +59,13 @@ IronProse CLI — prose analysis tools for writers
 Usage: ironprose [OPTIONS] <COMMAND>
 
 Commands:
-  mcp         Start the MCP stdio server for editor integration (Claude Desktop, VS Code, etc.)
   analyze     Analyze prose text for style, grammar, and craft issues
   compare     Compare original and revised text
   list-rules  List all available analysis rules
   help        Print this message or the help of the given subcommand(s)
 
 Options:
-      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
+      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
       --api-key <API_KEY>  API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
   -h, --help               Print help
   -V, --version            Print version
@@ -93,10 +85,10 @@ Options:
   -f, --file <FILE>                  Read input from a file
       --score-only                   Only output scores (no diagnostics)
       --rules <RULES>                Only run specific rules (comma-separated)
+      --api-url <API_URL>            IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
       --severity-min <SEVERITY_MIN>  Minimum severity: error, warning, information, hint
-      --api-url <API_URL>            IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
-  -o, --output <OUTPUT>              Output format: json (default), or text [default: json]
       --api-key <API_KEY>            API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
+  -o, --output <OUTPUT>              Output format: json (default), or text [default: json]
   -h, --help                         Print help
 ```
 
@@ -111,10 +103,10 @@ Options:
       --original <ORIGINAL>            Original text (or use --original-file)
       --revised <REVISED>              Revised text (or use --revised-file)
       --original-file <ORIGINAL_FILE>  Read original from file
+      --api-url <API_URL>              IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
       --revised-file <REVISED_FILE>    Read revised from file
-      --api-url <API_URL>              IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
-  -o, --output <OUTPUT>                Output format: json (default), or text [default: json]
       --api-key <API_KEY>              API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
+  -o, --output <OUTPUT>                Output format: json (default), or text [default: json]
   -h, --help                           Print help
 ```
 
@@ -126,65 +118,14 @@ List all available analysis rules
 Usage: ironprose list-rules [OPTIONS]
 
 Options:
-      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
+      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
       --api-key <API_KEY>  API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
   -h, --help               Print help
 ```
 
-### `ironprose mcp`
-
-```
-Start the MCP stdio server for editor integration (Claude Desktop, VS Code, etc.)
-
-Usage: ironprose mcp [OPTIONS]
-
-Options:
-      --workspace <WORKSPACE>  Workspace directory for local file tools (read_file, write_file, list_files) [env: IRONPROSE_WORKSPACE=]
-      --api-url <API_URL>      IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
-      --api-key <API_KEY>      API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
-  -h, --help                   Print help
-```
-
-## MCP Server (AI Editor Integration)
-
-When used as an MCP server, IronProse gives your AI assistant direct access to
-prose analysis tools — so it can analyze chapters, compare drafts, and suggest
-revisions without copy-pasting text.
-
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "ironprose": {
-      "command": "npx",
-      "args": ["-y", "ironprose", "mcp", "--workspace", "/path/to/manuscript"]
-    }
-  }
-}
-```
-
-### VS Code / Cursor
-
-Add to `.vscode/mcp.json`:
-
-```json
-{
-  "servers": {
-    "ironprose": {
-      "command": "npx",
-      "args": ["-y", "ironprose", "mcp", "--workspace", "${workspaceFolder}"]
-    }
-  }
-}
-```
-
 ## Environment Variables
 
-| Variable              | Description                      | Default                     |
-| --------------------- | -------------------------------- | --------------------------- |
-| `IRONPROSE_API_URL`   | API base URL                     | `https://api.ironprose.com` |
-| `IRONPROSE_API_KEY`   | API key for authenticated access | free tier (5000 words)      |
-| `IRONPROSE_WORKSPACE` | Default workspace directory      | none                        |
+| Variable            | Description                      | Default                          |
+| ------------------- | -------------------------------- | -------------------------------- |
+| `IRONPROSE_API_URL` | API base URL                     | `https://prose-mcp.fly.dev`      |
+| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)           |

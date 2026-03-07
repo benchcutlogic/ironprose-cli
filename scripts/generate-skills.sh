@@ -14,7 +14,6 @@ HELP_ROOT=$("$BINARY" --help 2>&1)
 HELP_ANALYZE=$("$BINARY" analyze --help 2>&1)
 HELP_COMPARE=$("$BINARY" compare --help 2>&1)
 HELP_LIST_RULES=$("$BINARY" list-rules --help 2>&1)
-HELP_MCP=$("$BINARY" mcp --help 2>&1)
 
 cat > skills/SKILL.md << 'HEADER'
 ---
@@ -97,60 +96,17 @@ HEADER
   echo '```'
   echo "$HELP_LIST_RULES"
   echo '```'
-  echo ''
-  echo '### `ironprose mcp`'
-  echo ''
-  echo '```'
-  echo "$HELP_MCP"
-  echo '```'
 } >> skills/SKILL.md
 
 # Append static sections
 cat >> skills/SKILL.md << 'FOOTER'
 
-## MCP Server (AI Editor Integration)
-
-When used as an MCP server, IronProse gives your AI assistant direct access to
-prose analysis tools — so it can analyze chapters, compare drafts, and suggest
-revisions without copy-pasting text.
-
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "ironprose": {
-      "command": "npx",
-      "args": ["-y", "ironprose", "mcp", "--workspace", "/path/to/manuscript"]
-    }
-  }
-}
-```
-
-### VS Code / Cursor
-
-Add to `.vscode/mcp.json`:
-
-```json
-{
-  "servers": {
-    "ironprose": {
-      "command": "npx",
-      "args": ["-y", "ironprose", "mcp", "--workspace", "${workspaceFolder}"]
-    }
-  }
-}
-```
-
 ## Environment Variables
 
-| Variable              | Description                      | Default                     |
-| --------------------- | -------------------------------- | --------------------------- |
-| `IRONPROSE_API_URL`   | API base URL                     | `https://api.ironprose.com` |
-| `IRONPROSE_API_KEY`   | API key for authenticated access | free tier (5000 words)      |
-| `IRONPROSE_WORKSPACE` | Default workspace directory      | none                        |
+| Variable            | Description                      | Default                          |
+| ------------------- | -------------------------------- | -------------------------------- |
+| `IRONPROSE_API_URL` | API base URL                     | `https://prose-mcp.fly.dev`      |
+| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)           |
 FOOTER
 
 echo "✅ Generated skills/SKILL.md"
