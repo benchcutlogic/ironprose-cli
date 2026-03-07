@@ -109,6 +109,64 @@ pub async fn full_spec(api_base: &str) -> Value {
     embedded_spec()
 }
 
+/// Resolve a single JSON Reference (`$ref`) to its target within the spec.
+///
+/// Only local refs of the form `#/a/b/c` are supported.
+fn resolve_ref<'a>(ref_str: &str, spec: &'a Value) -> Option<&'a Value> {
+    let path = ref_str.strip_prefix("#/")?;
+    let mut current = spec;
+    for part in path.split('/') {
+        current = current.get(part)?;
+    }
+    Some(current)
+}
+
+/// Recursively resolve all `$ref` pointers in a JSON value using the full spec.
+///
+/// If a `$ref` object is encountered, it is replaced by the referenced schema
+/// (itself recursively resolved). All other values are traversed unchanged.
+pub fn resolve_refs(value: &Value, spec: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            if let Some(ref_str) = map.get("$ref").and_then(Value::as_str) {
+                if let Some(resolved) = resolve_ref(ref_str, spec) {
+                    return resolve_refs(resolved, spec);
+                }
+            }
+            let mut new_map = serde_json::Map::new();
+            for (k, v) in map {
+                new_map.insert(k.clone(), resolve_refs(v, spec));
+            }
+            Value::Object(new_map)
+        }
+        Value::Array(arr) => Value::Array(arr.iter().map(|v| resolve_refs(v, spec)).collect()),
+        other => other.clone(),
+    }
+}
+
+/// Convert a schema's `properties` map into a flat `parameters` array of
+/// `{ name, description }` objects for easy agent consumption.
+fn properties_to_parameters(schema: &Value) -> Option<Value> {
+    let props = schema.get("properties")?.as_object()?;
+    let mut params: Vec<Value> = props
+        .iter()
+        .map(|(name, prop)| {
+            serde_json::json!({
+                "name": name,
+                "description": prop.get("description").cloned().unwrap_or(Value::Null),
+            })
+        })
+        .collect();
+    // Sort for stable, deterministic output.
+    params.sort_by(|a, b| {
+        a["name"]
+            .as_str()
+            .unwrap_or("")
+            .cmp(b["name"].as_str().unwrap_or(""))
+    });
+    Some(Value::Array(params))
+}
+
 /// Get the schema for a specific endpoint.
 ///
 /// Maps user-facing names to OpenAPI paths:
@@ -118,6 +176,9 @@ pub async fn full_spec(api_base: &str) -> Value {
 /// - `list-rules` / `list_rules` → GET /rules
 /// - `entitlement` → GET /entitlement
 /// - `insights` → GET /insights
+///
+/// All `$ref` pointers in the returned schema are resolved inline so that
+/// agents can discover every parameter without additional lookups.
 pub fn endpoint_schema(spec: &Value, name: &str) -> Result<Value, String> {
     let paths = spec.get("paths").ok_or("OpenAPI spec missing 'paths'")?;
 
@@ -150,7 +211,18 @@ pub fn endpoint_schema(spec: &Value, name: &str) -> Result<Value, String> {
     });
 
     if let Some(request_body) = method_obj.get("requestBody") {
-        result["request_body"] = request_body.clone();
+        // Resolve all $ref pointers so agents see inline schemas, not opaque refs.
+        let resolved_body = resolve_refs(request_body, spec);
+
+        // Extract the resolved JSON schema (application/json content type).
+        if let Some(inline_schema) = resolved_body.pointer("/content/application~1json/schema") {
+            // Surface body parameters as a flat list for quick agent discoverability.
+            if let Some(params) = properties_to_parameters(inline_schema) {
+                result["parameters"] = params;
+            }
+        }
+
+        result["request_body"] = resolved_body;
     }
     if let Some(responses) = method_obj.get("responses") {
         result["responses"] = responses.clone();
@@ -161,6 +233,7 @@ pub fn endpoint_schema(spec: &Value, name: &str) -> Result<Value, String> {
     if let Some(summary) = method_obj.get("summary") {
         result["summary"] = summary.clone();
     }
+    // URL/query parameters (GET endpoints); these complement body parameters above.
     if let Some(params) = method_obj.get("parameters") {
         result["parameters"] = params.clone();
     }
