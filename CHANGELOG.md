@@ -1,5 +1,20 @@
 # ironprose-cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 7377bad: Add --genre and --locale flags to analyze subcommand
+- 9f038b4: feat: add insights subcommand (closes #28)
+
+### Patch Changes
+
+- af5822e: Added `insights` and `export` to the CLI's schema mapping so agents can introspect the endpoints.
+- 0d1e061: Deduplicate diagnostics in compare introduced/fixed arrays
+- d12ecf7: Add --output flag to list-rules subcommand
+- ca5abbd: Document --output text stream split and fix 0-indexed line numbers
+- 99fd4c0: Remove non-existent export endpoint from schema error message
+
 ## 0.3.1
 
 ### Patch Changes
