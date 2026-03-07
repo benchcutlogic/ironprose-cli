@@ -475,8 +475,11 @@ fn test_analyze_invalid_locale_exits_1() {
     cli()
         .args(["analyze", "Some text.", "--locale", "klingon"])
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("unknown locale"));
+        .code(1)
+        .stderr(
+            predicate::str::contains("unknown locale")
+                .and(predicate::str::contains("accepted locales")),
+        );
 }
 
 #[test]
@@ -484,8 +487,12 @@ fn test_analyze_invalid_locale_shows_valid_values() {
     cli()
         .args(["analyze", "Some text.", "--locale", "fr-FR"])
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("en-us").or(predicate::str::contains("en-any")));
+        .code(1)
+        .stderr(
+            predicate::str::contains("accepted locales")
+                .and(predicate::str::contains("en-us"))
+                .and(predicate::str::contains("en-any")),
+        );
 }
 
 // ── Input Hardening Tests ──────────────────────────────────────
