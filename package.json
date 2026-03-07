@@ -6,6 +6,7 @@
     "tag-release": "./scripts/tag-release.sh"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.0"
+    "@changesets/cli": "^2.29.0",
+    "lefthook": "^2.1.3"
   }
 }
