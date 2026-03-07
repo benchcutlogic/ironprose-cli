@@ -201,6 +201,14 @@ pub struct DiagnosticItem {
     /// Unique identifier (use with the `rate` tool).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+
+    /// Whether this diagnostic was produced by a Heuristic, Model, or Hybrid.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_type: Option<String>,
+
+    /// Confidence score (0.0–1.0). Heuristics default to 1.0.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<f64>,
 }
 
 /// 6-axis quality score.
@@ -335,6 +343,8 @@ pub(crate) mod fixtures {
             end_line: 0,
             end_char: 8,
             id: Some("d-001".into()),
+            source_type: Some("Heuristic".into()),
+            confidence: Some(1.0),
         }
     }
 }

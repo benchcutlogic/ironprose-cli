@@ -83,6 +83,9 @@ ironprose list-rules
 
 # Inspect API schema
 ironprose schema analyze
+
+# Rate a diagnostic (closes the feedback loop)
+ironprose rate --rule repetition --rating false_positive --diagnostic-id d-001
 ```
 
 ## Configuration

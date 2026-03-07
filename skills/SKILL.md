@@ -1,7 +1,14 @@
 ---
 name: skills
 description: Fiction prose analysis — catch weak verbs, repetition, clichés, passive voice, and other craft issues in manuscripts
-metadata: {"openclaw": {"homepage": "https://github.com/benchcutlogic/ironprose-cli", "requires": {"bins": ["ironprose"]}}}
+metadata:
+  {
+    "openclaw":
+      {
+        "homepage": "https://github.com/benchcutlogic/ironprose-cli",
+        "requires": { "bins": ["ironprose"] },
+      },
+  }
 ---
 
 # IronProse CLI — Fiction Writing Assistant
@@ -49,6 +56,30 @@ ironprose compare --original-file draft_v1.md --revised-file draft_v2.md
 pbpaste | ironprose analyze --output text
 ```
 
+### Rate diagnostics you disagree with
+
+After analyzing text, rate any diagnostics that seem off. This directly
+improves the engine's calibration.
+
+```bash
+# Flag a false positive — the engine learns from this
+ironprose rate --rule repetition --rating false_positive \
+  --diagnostic-id d-001 --context "Intentional repetition for emphasis"
+
+# Or via raw JSON for full control
+ironprose rate --json '{"rule":"repetition","rating":"not_helpful","diagnostic_id":"d-001"}'
+
+# Introspect the rate schema first
+ironprose schema rate
+```
+
+**Rules for rating:**
+
+- Always include `--diagnostic-id` when available (from the analyze response)
+- Use `false_positive` when the flagged issue isn't actually present
+- Use `not_helpful` when the issue exists but isn't worth flagging
+- Use `helpful` to confirm good diagnostics
+
 ## CLI Reference
 
 ### `ironprose`
@@ -61,6 +92,7 @@ Usage: ironprose [OPTIONS] <COMMAND>
 Commands:
   analyze     Analyze prose text for style, grammar, and craft issues
   compare     Compare original and revised text
+  rate        Rate a diagnostic as helpful, not_helpful, or false_positive
   list-rules  List all available analysis rules
   schema      Dump the API schema for an endpoint (agent introspection)
   help        Print this message or the help of the given subcommand(s)
@@ -128,7 +160,25 @@ Options:
 
 ## Environment Variables
 
-| Variable            | Description                      | Default                          |
-| ------------------- | -------------------------------- | -------------------------------- |
-| `IRONPROSE_API_URL` | API base URL                     | `https://prose-mcp.fly.dev`      |
-| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)           |
+| Variable            | Description                      | Default                     |
+| ------------------- | -------------------------------- | --------------------------- |
+| `IRONPROSE_API_URL` | API base URL                     | `https://prose-mcp.fly.dev` |
+| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)      |
+
+### `ironprose rate`
+
+```
+Rate a diagnostic as helpful, not_helpful, or false_positive
+
+Usage: ironprose rate [OPTIONS]
+
+Options:
+      --rule <RULE>                    Rule that produced the diagnostic
+      --rating <RATING>                Rating: helpful, not_helpful, or false_positive
+      --json <JSON>                    Raw JSON payload (sent directly to the API, bypasses other flags)
+      --context <CONTEXT>              Why this rating was given (free-text context)
+      --diagnostic-id <DIAGNOSTIC_ID>  Diagnostic ID from the analyze response
+      --api-url <API_URL>              IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
+      --api-key <API_KEY>              API key for authenticated access [env: IRONPROSE_API_KEY=]
+  -h, --help                           Print help
+```

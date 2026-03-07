@@ -100,11 +100,38 @@ enum Commands {
     /// Examples:
     ///   ironprose schema analyze
     ///   ironprose schema compare
+    ///   ironprose schema rate
     ///   ironprose schema list-rules
     ///   ironprose schema          # dumps full OpenAPI spec
     Schema {
         /// Endpoint name: analyze, compare, rate, list-rules, entitlement
         endpoint: Option<String>,
+    },
+
+    /// Rate a diagnostic as helpful, not_helpful, or false_positive
+    ///
+    /// Agents: prefer --json for full API control.
+    /// Humans: use --rule and --rating convenience flags.
+    Rate {
+        /// Rule that produced the diagnostic
+        #[arg(long)]
+        rule: Option<String>,
+
+        /// Rating: helpful, not_helpful, or false_positive
+        #[arg(long)]
+        rating: Option<String>,
+
+        /// Raw JSON payload (sent directly to the API, bypasses other flags)
+        #[arg(long, conflicts_with_all = ["rule", "rating", "context", "diagnostic_id"])]
+        json: Option<String>,
+
+        /// Why this rating was given (free-text context)
+        #[arg(long)]
+        context: Option<String>,
+
+        /// Diagnostic ID from the analyze response
+        #[arg(long)]
+        diagnostic_id: Option<String>,
     },
 }
 
@@ -192,6 +219,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 serde_json::to_string_pretty(&output).unwrap_or_default()
             );
         }
+
+        Commands::Rate {
+            rule,
+            rating,
+            json,
+            context,
+            diagnostic_id,
+        } => {
+            let args = if let Some(raw) = json {
+                input::validate_json_input(&raw)?
+            } else {
+                let rule =
+                    rule.ok_or("--rule is required (or use --json for raw payload passthrough)")?;
+                let rating = rating
+                    .ok_or("--rating is required: helpful, not_helpful, or false_positive")?;
+                let mut args = serde_json::json!({
+                    "rule": rule,
+                    "rating": rating,
+                });
+                if let Some(ctx) = context {
+                    args["context"] = serde_json::json!(ctx);
+                }
+                if let Some(did) = diagnostic_id {
+                    args["diagnostic_id"] = serde_json::json!(did);
+                }
+                args
+            };
+
+            let result = client.call_remote("rate", args).await?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&result).unwrap_or_default()
+            );
+        }
     }
 
     Ok(())
@@ -229,10 +290,30 @@ fn print_output(value: &serde_json::Value, format: &str) {
                     let severity = d.get("severity").and_then(|v| v.as_str()).unwrap_or("?");
                     let message = d.get("message").and_then(|v| v.as_str()).unwrap_or("?");
                     let line = d.get("start_line").and_then(|v| v.as_u64()).unwrap_or(0);
-                    eprintln!("  [{severity}] L{line}: {message} ({rule})");
+
+                    let source_tag = match d.get("source_type").and_then(|v| v.as_str()) {
+                        Some(st) => {
+                            let conf = d.get("confidence").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                            format!(" [{st} {conf:.2}]")
+                        }
+                        None => String::new(),
+                    };
+
+                    let id_tag = match d.get("id").and_then(|v| v.as_str()) {
+                        Some(id) => format!(" [id:{id}]"),
+                        None => String::new(),
+                    };
+
+                    eprintln!("  [{severity}] L{line}: {message} ({rule}){source_tag}{id_tag}");
                 }
                 let count = diagnostics.len();
                 eprintln!("\n{count} diagnostic(s)");
+
+                if diagnostics.iter().any(|d| d.get("id").is_some()) {
+                    eprintln!(
+                        "\nRate diagnostics: ironprose rate --rule <rule> --rating helpful|not_helpful|false_positive --diagnostic-id <id>"
+                    );
+                }
             }
             if let Some(score) = value.get("score") {
                 println!(
