@@ -1,5 +1,11 @@
 # ironprose-cli
 
+## 0.3.1
+
+### Patch Changes
+
+- d947aa0: docs: wrap long CLI command examples in README and SKILL.md to prevent horizontal overflow on npmjs.com
+
 ## 0.3.0
 
 ### Minor Changes
