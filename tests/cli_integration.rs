@@ -333,3 +333,102 @@ async fn test_error_401_unauthorized() {
         .failure()
         .stderr(predicate::str::contains("401").or(predicate::str::contains("authentication")));
 }
+
+// ── JSON Passthrough Tests ─────────────────────────────────────
+
+#[tokio::test]
+async fn test_analyze_json_passthrough() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/analyze"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::analyze_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "analyze",
+            "--json",
+            r#"{"text": "The dark night was very dark."}"#,
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("concreteness"));
+}
+
+#[tokio::test]
+async fn test_compare_json_passthrough() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/compare"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::compare_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "compare",
+            "--json",
+            r#"{"original": "First draft.", "revised": "Second draft."}"#,
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("fixed"));
+}
+
+// ── Schema Introspection Tests ─────────────────────────────────
+
+#[test]
+fn test_schema_full_spec() {
+    cli()
+        .args(["schema"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("openapi"))
+        .stdout(predicate::str::contains("paths"));
+}
+
+#[test]
+fn test_schema_endpoint() {
+    cli()
+        .args(["schema", "analyze"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("/analyze"))
+        .stdout(predicate::str::contains("POST"));
+}
+
+#[test]
+fn test_schema_unknown_endpoint() {
+    cli()
+        .args(["schema", "nonexistent"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Unknown endpoint"));
+}
+
+// ── Input Hardening Tests ──────────────────────────────────────
+
+#[test]
+fn test_reject_path_traversal() {
+    cli()
+        .args(["analyze", "--file", "../../etc/passwd"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("traversal"));
+}
+
+#[test]
+fn test_reject_absolute_path() {
+    cli()
+        .args(["analyze", "--file", "/etc/passwd"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Absolute"));
+}

@@ -62,6 +62,7 @@ Commands:
   analyze     Analyze prose text for style, grammar, and craft issues
   compare     Compare original and revised text
   list-rules  List all available analysis rules
+  schema      Dump the API schema for an endpoint (agent introspection)
   help        Print this message or the help of the given subcommand(s)
 
 Options:
@@ -83,6 +84,7 @@ Arguments:
 
 Options:
   -f, --file <FILE>                  Read input from a file
+      --json <JSON>                  Raw JSON payload (sent directly to the API, bypasses other flags)
       --score-only                   Only output scores (no diagnostics)
       --rules <RULES>                Only run specific rules (comma-separated)
       --api-url <API_URL>            IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
@@ -103,8 +105,9 @@ Options:
       --original <ORIGINAL>            Original text (or use --original-file)
       --revised <REVISED>              Revised text (or use --revised-file)
       --original-file <ORIGINAL_FILE>  Read original from file
-      --api-url <API_URL>              IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
       --revised-file <REVISED_FILE>    Read revised from file
+      --api-url <API_URL>              IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
+      --json <JSON>                    Raw JSON payload (sent directly to the API, bypasses other flags)
       --api-key <API_KEY>              API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
   -o, --output <OUTPUT>                Output format: json (default), or text [default: json]
   -h, --help                           Print help

@@ -1,23 +1,57 @@
-# AGENTS.md — ironprose-cli
+# AGENTS.md — IronProse CLI
 
-> **Reference for AI agents** working in this repo.
+> This CLI is frequently invoked by AI/LLM agents.
+> Always assume inputs can be adversarial.
 
 ## Project Overview
 
 **ironprose-cli** — standalone CLI for [IronProse](https://ironprose.com) prose analysis. Proxies all analysis to the remote API (no embedded engine).
 
-| Command                | Description                                          |
-| ---------------------- | ---------------------------------------------------- |
-| `ironprose mcp`        | Stdio MCP server for Claude Desktop, VS Code, Cursor |
-| `ironprose analyze`    | Analyze prose (stdin, file, or arg)                  |
-| `ironprose compare`    | Compare original vs revised text                     |
-| `ironprose list-rules` | List all analysis rules                              |
+| Command                | Description                                 |
+| ---------------------- | ------------------------------------------- |
+| `ironprose analyze`    | Analyze prose (stdin, file, arg, or --json) |
+| `ironprose compare`    | Compare original vs revised text            |
+| `ironprose list-rules` | List all analysis rules                     |
+| `ironprose schema`     | Dump API schema for agent introspection     |
+
+## Agent-First Usage
+
+```bash
+# Always use --output json for machine-readable output
+ironprose analyze "The dark night was very dark." --output json
+
+# Raw JSON passthrough — send the exact API payload
+ironprose analyze --json '{"text": "...", "config": {"rules": ["repetition"]}}'
+
+# Introspect API schema before constructing requests
+ironprose schema analyze
+
+# Minimize output tokens with --score-only
+ironprose analyze --file chapter.md --score-only --output json
+
+# Pipe large text via stdin
+cat chapter.md | ironprose analyze --output json
+
+# Compare drafts
+ironprose compare --original "First draft." --revised "Second draft." --output json
+```
+
+## Rules for Agents
+
+1. **Always use `--output json`** — never parse text output.
+2. **Use `--score-only`** to minimize output tokens when you only need scores.
+3. **Use `ironprose schema <endpoint>`** to introspect API schemas at runtime.
+4. **Use `--json`** for raw payload passthrough when you need full API control.
+5. **Pipe large text via stdin** — `cat chapter.md | ironprose analyze --output json`
+6. **Never construct file paths with `..`** — traversal is rejected.
+7. **Never use absolute file paths** — only relative paths are allowed.
+8. **Do not pre-URL-encode** inputs — they will be double-encoded.
 
 ## Build & Test
 
 ```bash
 cargo build                           # Debug build
-cargo test                            # All tests (28 unit tests)
+cargo test                            # All tests
 cargo clippy -- -D warnings           # Lint (zero warnings policy)
 cargo fmt --all -- --check            # Format check
 ```
@@ -26,23 +60,37 @@ cargo fmt --all -- --check            # Format check
 
 ```
 src/
-├── main.rs              # clap CLI entrypoint (global --api-url, --api-key)
-└── mcp/
-    ├── mod.rs            # MCP module entry
-    ├── server.rs         # rmcp MCP server (tool routing, schemas)
-    ├── proxy.rs          # HTTP proxy to remote IronProse API
-    ├── local_tools.rs    # read_file, write_file, list_files
-    ├── sandbox.rs        # Path validation (workspace containment)
-    ├── audit.rs          # Write operation audit log
-    └── error.rs          # MCP error mapping (HTTP → MCP errors)
+├── main.rs     # clap CLI entrypoint (global --api-url, --api-key)
+├── client.rs   # HTTP client for remote IronProse API
+├── error.rs    # ApiError enum + HTTP status mapping
+├── input.rs    # Input hardening (path validation, control char rejection)
+├── schema.rs   # OpenAPI schema introspection (embedded spec)
+└── types.rs    # Typed API request/response structs
 ```
 
 ### Key Design Decisions
 
 - **No embedded engine**: All analysis runs on the remote API. Binary stays lean (~5MB).
-- **Sandboxed file access**: `sandbox.rs` enforces workspace containment. No absolute paths, no traversal.
-- **Global config**: `--api-url` and `--api-key` are global clap args with env var fallbacks (`IRONPROSE_API_URL`, `IRONPROSE_API_KEY`).
-- **MCP server**: Uses `rmcp` 0.15 with `schemars` v1. Stdio transport only.
+- **Input hardening**: `input.rs` rejects path traversal, absolute paths, control chars, percent-encoding.
+- **Schema introspection**: Agents self-serve API docs via `ironprose schema <endpoint>`.
+- **Raw JSON passthrough**: `--json` bypasses flag-to-JSON construction for full API control.
+- **Global config**: `--api-url` and `--api-key` are global clap args with env var fallbacks.
+
+## Configuration
+
+| Env Var             | CLI Flag    | Default                     | Description                     |
+| ------------------- | ----------- | --------------------------- | ------------------------------- |
+| `IRONPROSE_API_URL` | `--api-url` | `https://prose-mcp.fly.dev` | API base URL                    |
+| `IRONPROSE_API_KEY` | `--api-key` | (none)                      | API key (free tier: 5000 words) |
+
+## Error Handling
+
+All errors are written to stderr. Parse stderr for error details:
+
+- HTTP 401/403 → authentication failed, check `IRONPROSE_API_KEY`
+- HTTP 402 → subscription required
+- HTTP 429 → rate limited, wait before retrying
+- HTTP 5xx → transient server error, retry after brief delay
 
 ## Release Process
 
@@ -54,38 +102,9 @@ pnpm changeset                        # Create changeset
 # Merge version PR → tag push → cargo-dist builds + npm publish
 ```
 
-### Distribution
-
-| Method               | Command                                   |
-| -------------------- | ----------------------------------------- |
-| npm                  | `npx ironprose --help`                    |
-| Cargo                | `cargo install ironprose-cli`             |
-| Shell (macOS/Linux)  | `curl --proto '=https' -LsSf <url> \| sh` |
-| PowerShell (Windows) | `irm <url> \| iex`                        |
-
 ## Rules
 
 - Always run `cargo test` and `cargo clippy -- -D warnings` before committing
 - Use conventional commit messages (`feat:`, `fix:`, `chore:`, etc.)
 - Use `pnpm` (not `npm`)
 - Zero clippy warnings policy
-- Test fixtures in `tests/fixtures/` (Frankenstein, Sherlock Holmes — public domain)
-
-## Configuration
-
-| Env Var               | CLI Flag      | Default                     | Description                      |
-| --------------------- | ------------- | --------------------------- | -------------------------------- |
-| `IRONPROSE_API_URL`   | `--api-url`   | `https://api.ironprose.com` | API base URL                     |
-| `IRONPROSE_API_KEY`   | `--api-key`   | (none)                      | API key (free tier: 5000 words)  |
-| `IRONPROSE_WORKSPACE` | `--workspace` | (none)                      | Workspace dir for MCP file tools |
-
-## Files Reference
-
-| File                      | Purpose                                      |
-| ------------------------- | -------------------------------------------- |
-| `dist-workspace.toml`     | cargo-dist config (targets, installers, npm) |
-| `.changeset/config.json`  | Changesets config                            |
-| `scripts/sync-version.sh` | Syncs changeset version → Cargo.toml         |
-| `scripts/tag-release.sh`  | Creates git tag for cargo-dist release       |
-| `skills/SKILL.md`         | Agent discoverability (usage examples)       |
-| `tests/fixtures/`         | Public domain novels for testing             |
