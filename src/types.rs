@@ -166,6 +166,38 @@ pub struct EntitlementResult {
     pub valid: bool,
 }
 
+/// Response from `GET /api/insights`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsightsResult {
+    /// Per-rule feedback statistics, sorted by total ratings descending.
+    pub rules: Vec<RuleInsightItem>,
+
+    /// Total number of rules with ratings.
+    pub total: u64,
+}
+
+/// Per-rule feedback statistics.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleInsightItem {
+    /// The analyzer rule name.
+    pub rule: String,
+
+    /// Total number of ratings for this rule.
+    pub total_ratings: i64,
+
+    /// Number of "helpful" ratings.
+    pub helpful: i64,
+
+    /// Number of "not_helpful" ratings.
+    pub not_helpful: i64,
+
+    /// Number of "false_positive" ratings.
+    pub false_positive: i64,
+
+    /// Precision proxy: helpful / (helpful + false_positive). 0 if no data.
+    pub precision_proxy: f64,
+}
+
 /// Error response body.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorBody {
@@ -306,6 +338,30 @@ pub(crate) mod fixtures {
         EntitlementResult {
             tier: "free".into(),
             valid: true,
+        }
+    }
+
+    pub fn insights_result() -> InsightsResult {
+        InsightsResult {
+            rules: vec![
+                RuleInsightItem {
+                    rule: "repetition".into(),
+                    total_ratings: 10,
+                    helpful: 7,
+                    not_helpful: 2,
+                    false_positive: 1,
+                    precision_proxy: 0.875,
+                },
+                RuleInsightItem {
+                    rule: "passive_voice".into(),
+                    total_ratings: 5,
+                    helpful: 3,
+                    not_helpful: 1,
+                    false_positive: 1,
+                    precision_proxy: 0.75,
+                },
+            ],
+            total: 2,
         }
     }
 

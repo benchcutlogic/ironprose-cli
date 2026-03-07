@@ -121,6 +121,32 @@ enum Commands {
         endpoint: Option<String>,
     },
 
+    /// Get aggregate feedback insights per analyzer rule
+    ///
+    /// Returns per-rule counts of helpful, not_helpful, and false_positive
+    /// ratings, plus a precision proxy. Requires an API key.
+    Insights {
+        /// Only include ratings on or after this date (YYYY-MM-DD)
+        #[arg(long)]
+        since: Option<String>,
+
+        /// Only include ratings before this date (YYYY-MM-DD)
+        #[arg(long)]
+        until: Option<String>,
+
+        /// Filter by genre (prefix match: 'fiction' matches 'fiction:literary')
+        #[arg(long)]
+        genre: Option<String>,
+
+        /// Filter by work identifier
+        #[arg(long)]
+        work_id: Option<String>,
+
+        /// Output format: json (default)
+        #[arg(short, long, default_value = "json")]
+        output: String,
+    },
+
     /// Rate a diagnostic as helpful, not_helpful, or false_positive
     ///
     /// Agents: prefer --json for full API control.
@@ -239,6 +265,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "{}",
                 serde_json::to_string_pretty(&output).unwrap_or_default()
             );
+        }
+
+        Commands::Insights {
+            since,
+            until,
+            genre,
+            work_id,
+            output,
+        } => {
+            let result = client
+                .call_insights(
+                    since.as_deref(),
+                    until.as_deref(),
+                    genre.as_deref(),
+                    work_id.as_deref(),
+                )
+                .await?;
+            print_output(&result, &output);
         }
 
         Commands::Rate {

@@ -95,6 +95,44 @@ ironprose list-rules --output json
 # Human-readable output
 ironprose analyze --file draft.md --output text
 ironprose rate --rule repetition --rating helpful --diagnostic-id d-001
+
+# Aggregate feedback insights (requires API key)
+ironprose insights
+ironprose insights --since 2024-01-01 --until 2024-12-31
+ironprose insights --genre fiction
+ironprose insights --work-id my-novel --since 2024-06-01
+```
+
+## Insights
+
+The `insights` subcommand returns aggregate feedback data per analyzer rule — counts of `helpful`, `not_helpful`, and `false_positive` ratings plus a precision proxy. Requires an API key.
+
+```bash
+# All-time insights
+ironprose insights
+
+# Filter by date range
+ironprose insights --since 2024-01-01 --until 2024-12-31
+
+# Filter by genre (prefix match)
+ironprose insights --genre fiction
+
+# Filter by work identifier
+ironprose insights --work-id my-novel
+```
+
+```json
+{
+  "rules": [
+    {
+      "rule": "repetition",
+      "helpful": 42,
+      "not_helpful": 3,
+      "false_positive": 1,
+      "precision_proxy": 0.91
+    }
+  ]
+}
 ```
 
 ### `--output text` stream split

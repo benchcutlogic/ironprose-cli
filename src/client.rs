@@ -84,6 +84,65 @@ impl ApiClient {
             .map_err(|e| ApiError::Parse(format!("Failed to deserialize response: {e}")))
     }
 
+    /// Fetch aggregate feedback insights per analyzer rule.
+    ///
+    /// All parameters are optional query filters:
+    /// - `since` / `until` → date range (YYYY-MM-DD)
+    /// - `genre` → genre prefix filter
+    /// - `work_id` → work identifier filter
+    pub async fn call_insights(
+        &self,
+        since: Option<&str>,
+        until: Option<&str>,
+        genre: Option<&str>,
+        work_id: Option<&str>,
+    ) -> Result<Value, ApiError> {
+        let url = format!("{}/api/insights", self.api_base);
+
+        let mut request = self.client.get(&url);
+
+        if let Some(ref key) = self.api_key {
+            request = request.bearer_auth(key);
+        }
+
+        // Append optional query parameters
+        let mut query: Vec<(&str, &str)> = Vec::new();
+        if let Some(s) = since {
+            query.push(("since", s));
+        }
+        if let Some(u) = until {
+            query.push(("until", u));
+        }
+        if let Some(g) = genre {
+            query.push(("genre", g));
+        }
+        if let Some(w) = work_id {
+            query.push(("work_id", w));
+        }
+        if !query.is_empty() {
+            request = request.query(&query);
+        }
+
+        let response = request.send().await.map_err(|e| {
+            ApiError::Transport(format!(
+                "Failed to reach IronProse API: {e}. Check your network connection."
+            ))
+        })?;
+
+        let status = response.status().as_u16();
+
+        if status == 200 {
+            let body: Value = response
+                .json()
+                .await
+                .map_err(|e| ApiError::Parse(format!("Failed to parse API response: {e}")))?;
+            Ok(body)
+        } else {
+            let body_text = response.text().await.unwrap_or_default();
+            Err(http_status_to_error(status, &body_text))
+        }
+    }
+
     /// Fetch documentation for a specific rule (returns markdown text).
     pub async fn rule_doc(&self, rule_name: &str) -> Result<String, ApiError> {
         let url = format!("{}/api/rules/{}", self.api_base, rule_name);
