@@ -93,7 +93,11 @@ enum Commands {
     },
 
     /// List all available analysis rules
-    ListRules,
+    ListRules {
+        /// Output format: json (default), or text
+        #[arg(short, long, default_value = "json")]
+        output: String,
+    },
 
     /// Dump the API schema for an endpoint (agent introspection)
     ///
@@ -202,11 +206,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             print_output(&result, &output);
         }
 
-        Commands::ListRules => {
+        Commands::ListRules { output } => {
             let result = client
                 .call_remote("list_rules", serde_json::json!({}))
                 .await?;
-            print_output(&result, "json");
+            print_output(&result, &output);
         }
 
         Commands::Schema { endpoint } => {
@@ -285,6 +289,16 @@ async fn resolve_input(
 fn print_output(value: &serde_json::Value, format: &str) {
     match format {
         "text" => {
+            if let Some(rules) = value.get("rules").and_then(|r| r.as_array()) {
+                for r in rules {
+                    let name = r.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+                    let category = r.get("category").and_then(|v| v.as_str()).unwrap_or("?");
+                    println!("{name}  [{category}]");
+                }
+                let total = rules.len();
+                eprintln!("\n{total} rule(s)");
+                return;
+            }
             if let Some(diagnostics) = value.get("diagnostics").and_then(|d| d.as_array()) {
                 for d in diagnostics {
                     let rule = d.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
