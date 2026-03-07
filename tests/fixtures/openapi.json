@@ -1,0 +1,414 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Iron Prose API",
+    "description": "Fiction-aware prose analysis API. Detects style, grammar, and pacing issues across 40+ writing craft analyzers. Returns diagnostics, a 6-axis quality score, and a statistical style profile.",
+    "license": { "name": "Proprietary", "url": "https://ironprose.com/terms" },
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://api.ironprose.com", "description": "Production" },
+    { "url": "http://localhost:3000", "description": "Local development" }
+  ],
+  "paths": {
+    "/analyze": {
+      "post": {
+        "tags": ["analysis"],
+        "summary": "Analyze prose text for writing craft issues.",
+        "operationId": "api_analyze",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AnalyzeParams" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis completed successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AnalyzeResult" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          }
+        },
+        "security": [{}, { "bearer": [] }]
+      }
+    },
+    "/compare": {
+      "post": {
+        "tags": ["analysis"],
+        "summary": "Compare two text versions and diff their diagnostics.",
+        "operationId": "api_compare",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompareParams" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Comparison completed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CompareResult" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/entitlement": {
+      "get": {
+        "tags": ["auth"],
+        "summary": "Check entitlement status for the current API key.",
+        "operationId": "api_entitlement",
+        "responses": {
+          "200": {
+            "description": "Entitlement status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EntitlementResult" }
+              }
+            }
+          }
+        },
+        "security": [{}, { "bearer": [] }]
+      }
+    },
+    "/rate": {
+      "post": {
+        "tags": ["feedback"],
+        "summary": "Rate a diagnostic as helpful, not helpful, or a false positive.",
+        "operationId": "api_rate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RateParams" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback recorded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RateResult" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          }
+        },
+        "security": [{}, { "bearer": [] }]
+      }
+    },
+    "/rules": {
+      "get": {
+        "tags": ["rules"],
+        "summary": "List all available analyzer rules.",
+        "operationId": "api_list_rules",
+        "responses": {
+          "200": {
+            "description": "Rules listed successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ListRulesResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rules/{name}": {
+      "get": {
+        "tags": ["rules"],
+        "summary": "Get documentation for a specific rule.",
+        "operationId": "api_rule_doc",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rule documentation",
+            "content": { "text/markdown": { "schema": { "type": "string" } } }
+          },
+          "404": {
+            "description": "Rule not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorBody" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyzeParams": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "config": {},
+          "locale": { "type": ["string", "null"] },
+          "rules": { "type": ["array", "null"], "items": { "type": "string" } },
+          "score_only": { "type": ["boolean", "null"] },
+          "severity_min": { "type": ["string", "null"] },
+          "text": { "type": "string" }
+        }
+      },
+      "AnalyzeResult": {
+        "type": "object",
+        "required": ["score", "word_count"],
+        "properties": {
+          "diagnostics": {
+            "type": ["array", "null"],
+            "items": { "$ref": "#/components/schemas/DiagnosticItem" }
+          },
+          "profile": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/ProfileResult" }
+            ]
+          },
+          "score": { "$ref": "#/components/schemas/ScoreResult" },
+          "truncated": { "type": ["boolean", "null"] },
+          "word_count": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "CompareParams": {
+        "type": "object",
+        "required": ["original", "revised"],
+        "properties": {
+          "config": {},
+          "locale": { "type": ["string", "null"] },
+          "original": { "type": "string" },
+          "revised": { "type": "string" }
+        }
+      },
+      "CompareResult": {
+        "type": "object",
+        "required": [
+          "fixed",
+          "introduced",
+          "persistent",
+          "original_score",
+          "revised_score"
+        ],
+        "properties": {
+          "fixed": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DiagnosticItem" }
+          },
+          "introduced": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DiagnosticItem" }
+          },
+          "original_score": { "$ref": "#/components/schemas/ScoreResult" },
+          "persistent": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DiagnosticItem" }
+          },
+          "revised_score": { "$ref": "#/components/schemas/ScoreResult" }
+        }
+      },
+      "DiagnosticItem": {
+        "type": "object",
+        "required": [
+          "rule",
+          "severity",
+          "message",
+          "start_line",
+          "start_char",
+          "end_line",
+          "end_char"
+        ],
+        "properties": {
+          "end_char": { "type": "integer", "format": "int32", "minimum": 0 },
+          "end_line": { "type": "integer", "format": "int32", "minimum": 0 },
+          "id": { "type": ["string", "null"] },
+          "message": { "type": "string" },
+          "rule": { "type": "string" },
+          "severity": { "type": "string" },
+          "start_char": { "type": "integer", "format": "int32", "minimum": 0 },
+          "start_line": { "type": "integer", "format": "int32", "minimum": 0 }
+        }
+      },
+      "EntitlementResult": {
+        "type": "object",
+        "required": ["tier", "valid"],
+        "properties": {
+          "tier": { "type": "string" },
+          "valid": { "type": "boolean" }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": ["error"],
+        "properties": { "error": { "type": "string" } }
+      },
+      "ListRulesResult": {
+        "type": "object",
+        "required": ["rules", "total"],
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleInfo" }
+          },
+          "total": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "ProfileResult": {
+        "type": "object",
+        "required": [
+          "avg_sentence_length",
+          "sentence_length_variance",
+          "min_sentence_length",
+          "max_sentence_length",
+          "total_sentences",
+          "total_paragraphs",
+          "dialogue_line_ratio",
+          "avg_paragraph_length_words"
+        ],
+        "properties": {
+          "avg_paragraph_length_words": {
+            "type": "number",
+            "format": "double"
+          },
+          "avg_sentence_length": { "type": "number", "format": "double" },
+          "dialogue_line_ratio": { "type": "number", "format": "double" },
+          "max_sentence_length": { "type": "integer", "minimum": 0 },
+          "min_sentence_length": { "type": "integer", "minimum": 0 },
+          "sentence_length_variance": { "type": "number", "format": "double" },
+          "total_paragraphs": { "type": "integer", "minimum": 0 },
+          "total_sentences": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "RateParams": {
+        "type": "object",
+        "required": ["rule", "rating"],
+        "properties": {
+          "context": { "type": ["string", "null"] },
+          "diagnostic_id": { "type": ["string", "null"] },
+          "end_char": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "minimum": 0
+          },
+          "end_line": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "minimum": 0
+          },
+          "input_text": { "type": ["string", "null"] },
+          "message": { "type": ["string", "null"] },
+          "rating": { "type": "string" },
+          "rule": { "type": "string" },
+          "severity": { "type": ["string", "null"] },
+          "start_char": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "minimum": 0
+          },
+          "start_line": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "RateResult": {
+        "type": "object",
+        "required": ["status", "message"],
+        "properties": {
+          "message": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      },
+      "RuleInfo": {
+        "type": "object",
+        "required": ["name", "category"],
+        "properties": {
+          "category": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "ScoreResult": {
+        "type": "object",
+        "required": [
+          "concreteness",
+          "imagery_density",
+          "vocabulary_richness",
+          "sentence_variety",
+          "dialogue_balance",
+          "pacing_score"
+        ],
+        "properties": {
+          "concreteness": { "type": "number", "format": "double" },
+          "dialogue_balance": { "type": "number", "format": "double" },
+          "imagery_density": { "type": "number", "format": "double" },
+          "pacing_score": { "type": "number", "format": "double" },
+          "sentence_variety": { "type": "number", "format": "double" },
+          "vocabulary_richness": { "type": "number", "format": "double" }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key"
+      }
+    }
+  }
+}

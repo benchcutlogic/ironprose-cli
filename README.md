@@ -68,7 +68,7 @@ Add to `.vscode/mcp.json`:
 
 | Variable              | Description                      | Default                     |
 | --------------------- | -------------------------------- | --------------------------- |
-| `IRONPROSE_API_URL`   | API base URL                     | `https://prose-mcp.fly.dev` |
+| `IRONPROSE_API_URL`   | API base URL                     | `https://api.ironprose.com` |
 | `IRONPROSE_API_KEY`   | API key for authenticated access | (free tier)                 |
 | `IRONPROSE_WORKSPACE` | Workspace directory              | (none)                      |
 

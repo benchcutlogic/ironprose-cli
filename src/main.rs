@@ -1,7 +1,11 @@
-mod mcp;
+mod error;
+#[allow(dead_code)]
+mod proxy;
+#[allow(dead_code)]
+mod types;
 
 use clap::{Parser, Subcommand};
-use tracing_subscriber::EnvFilter;
+use proxy::RemoteProxy;
 
 #[derive(Parser)]
 #[command(
@@ -29,13 +33,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start the MCP stdio server for editor integration (Claude Desktop, VS Code, etc.)
-    Mcp {
-        /// Workspace directory for local file tools (read_file, write_file, list_files)
-        #[arg(long, env = "IRONPROSE_WORKSPACE")]
-        workspace: Option<String>,
-    },
-
     /// Analyze prose text for style, grammar, and craft issues
     Analyze {
         /// Text to analyze (reads from stdin if not provided)
@@ -92,26 +89,9 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+    let proxy = RemoteProxy::new(cli.api_url, cli.api_key);
 
     match cli.command {
-        Commands::Mcp { workspace } => {
-            // Logging goes to stderr so stdout is reserved for MCP JSON-RPC.
-            tracing_subscriber::fmt()
-                .with_env_filter(
-                    EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".parse().unwrap()),
-                )
-                .with_writer(std::io::stderr)
-                .init();
-
-            tracing::info!(
-                api_base = %cli.api_url,
-                workspace = workspace.as_deref().unwrap_or("<none>"),
-                "ironprose mcp starting"
-            );
-
-            mcp::run(cli.api_url, cli.api_key, workspace).await?;
-        }
-
         Commands::Analyze {
             text,
             file,
@@ -121,7 +101,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             output,
         } => {
             let input = resolve_input(text, file.as_deref()).await?;
-            let proxy = mcp::proxy::RemoteProxy::new(cli.api_url, cli.api_key);
 
             let mut args = serde_json::json!({ "text": input });
             if score_only {
@@ -147,7 +126,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let orig = resolve_input(original, original_file.as_deref()).await?;
             let rev = resolve_input(revised, revised_file.as_deref()).await?;
-            let proxy = mcp::proxy::RemoteProxy::new(cli.api_url, cli.api_key);
 
             let args = serde_json::json!({
                 "original": orig,
@@ -159,7 +137,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Commands::ListRules => {
-            let proxy = mcp::proxy::RemoteProxy::new(cli.api_url, cli.api_key);
             let result = proxy
                 .call_remote("list_rules", serde_json::json!({}))
                 .await?;
@@ -195,7 +172,6 @@ async fn resolve_input(
 fn print_output(value: &serde_json::Value, format: &str) {
     match format {
         "text" => {
-            // Simple text rendering for terminal use
             if let Some(diagnostics) = value.get("diagnostics").and_then(|d| d.as_array()) {
                 for d in diagnostics {
                     let rule = d.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
