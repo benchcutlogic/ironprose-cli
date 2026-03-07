@@ -266,6 +266,25 @@ async fn test_list_rules() {
         .stdout(predicate::str::contains("\"total\": 3"));
 }
 
+#[tokio::test]
+async fn test_list_rules_text_output() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/rules"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::list_rules_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args(["list-rules", "--output", "text", "--api-url", &server.uri()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("repetition  [style]"))
+        .stdout(predicate::str::contains("passive_voice  [grammar]"))
+        .stderr(predicate::str::contains("3 rule(s)"));
+}
+
 // ── Error Handling Tests ───────────────────────────────────────
 
 #[tokio::test]
