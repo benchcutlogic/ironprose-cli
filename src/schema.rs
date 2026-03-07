@@ -117,6 +117,8 @@ pub async fn full_spec(api_base: &str) -> Value {
 /// - `rate` → POST /rate
 /// - `list-rules` / `list_rules` → GET /rules
 /// - `entitlement` → GET /entitlement
+/// - `insights` → GET /insights
+/// - `export` → GET /export
 pub fn endpoint_schema(spec: &Value, name: &str) -> Result<Value, String> {
     let paths = spec.get("paths").ok_or("OpenAPI spec missing 'paths'")?;
 
@@ -126,9 +128,11 @@ pub fn endpoint_schema(spec: &Value, name: &str) -> Result<Value, String> {
         "rate" => ("post", "/rate"),
         "list-rules" | "list_rules" | "rules" => ("get", "/rules"),
         "entitlement" => ("get", "/entitlement"),
+        "insights" => ("get", "/insights"),
+        "export" => ("get", "/export"),
         other => {
             return Err(format!(
-            "Unknown endpoint: {other}. Available: analyze, compare, rate, list-rules, entitlement"
+            "Unknown endpoint: {other}. Available: analyze, compare, rate, list-rules, entitlement, insights, export"
         ))
         }
     };

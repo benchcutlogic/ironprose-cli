@@ -11,15 +11,20 @@ if [[ ! -x "$BINARY" ]]; then
 fi
 
 HELP_ROOT=$("$BINARY" --help 2>&1)
-HELP_ANALYZE=$("$BINARY" analyze --help 2>&1)
-HELP_COMPARE=$("$BINARY" compare --help 2>&1)
-HELP_LIST_RULES=$("$BINARY" list-rules --help 2>&1)
 
-cat > skills/SKILL.md << 'HEADER'
+mkdir -p skills/ironprose
+cat > skills/ironprose/SKILL.md << 'HEADER'
 ---
-name: skills
+name: ironprose
 description: Fiction prose analysis — catch weak verbs, repetition, clichés, passive voice, and other craft issues in manuscripts
-metadata: {"openclaw": {"homepage": "https://github.com/benchcutlogic/ironprose-cli", "requires": {"bins": ["ironprose"]}}}
+metadata:
+  {
+    "openclaw":
+      {
+        "homepage": "https://github.com/benchcutlogic/ironprose-cli",
+        "requires": { "bins": ["ironprose"] },
+      },
+  }
 ---
 
 # IronProse CLI — Fiction Writing Assistant
@@ -40,73 +45,100 @@ cargo install ironprose-cli
 
 ## Common Workflows
 
-### Revise a chapter draft
+### Analyze prose (always use JSON output)
 
 ```bash
-# Full analysis with human-readable output
-ironprose analyze --file chapter-07.md --output text
+# Full analysis — JSON is the only stable output format
+ironprose analyze --file chapter-07.md --output json
 
-# Focus on specific craft issues
-ironprose analyze --file chapter-07.md --rules repetition,weak_verb,passive_voice
+# Pipe from stdin
+cat draft.md | ironprose analyze --output json
 
-# Score only — quick health check before submitting
-ironprose analyze --file chapter-07.md --score-only
+# Raw JSON passthrough — zero translation loss, full API control
+ironprose analyze \
+  --json '{"text":"The dark night was very dark."}' \
+  --output json
+
+# Scores only — minimizes output tokens
+ironprose analyze --file chapter-07.md --output json --score-only
 ```
 
-### Compare drafts during revision
+### Schema introspection — discover before you call
 
 ```bash
-# Did the rewrite actually improve the prose?
-ironprose compare --original-file draft_v1.md --revised-file draft_v2.md
+ironprose schema analyze   # see request/response shapes
+ironprose schema rate      # see rating payload schema
+ironprose schema           # dump full OpenAPI spec
+```
+
+### Compare drafts
+
+```bash
+# Did the rewrite improve the prose?
+ironprose compare \
+  --original-file draft_v1.md \
+  --revised-file draft_v2.md \
+  --output json
 ```
 
 ### Pipe from editor / stdin
 
 ```bash
-# Analyze selected text from clipboard
-pbpaste | ironprose analyze --output text
+pbpaste | ironprose analyze --output json
 ```
+
+### Rate diagnostics you disagree with
+
+After analyzing text, rate any diagnostics that seem off. This directly
+improves the engine's calibration.
+
+```bash
+# JSON passthrough — preferred for agents
+ironprose rate \
+  --json '{"rule":"repetition","rating":"false_positive","diagnostic_id":"d-001","context":"Intentional repetition"}'
+
+# Convenience flags — for humans or simple ratings
+ironprose rate \
+  --rule repetition \
+  --rating false_positive \
+  --diagnostic-id d-001 \
+  --context "Intentional repetition for emphasis"
+
+# Introspect the rate schema first
+ironprose schema rate
+```
+
+**Rules for rating:**
+
+- Always include `--diagnostic-id` when available (from the analyze response)
+- Use `false_positive` when the flagged issue isn't actually present
+- Use `not_helpful` when the issue exists but isn't worth flagging
+- Use `helpful` to confirm good diagnostics
 
 ## CLI Reference
 
+Agents should use `ironprose <command> --help` to introspect exact arguments and flags for a specific command instead of relying purely on this document.
 HEADER
 
 # Append the help output sections
 {
+  echo ''
   echo '### `ironprose`'
   echo ''
   echo '```'
   echo "$HELP_ROOT"
   echo '```'
   echo ''
-  echo '### `ironprose analyze`'
-  echo ''
-  echo '```'
-  echo "$HELP_ANALYZE"
-  echo '```'
-  echo ''
-  echo '### `ironprose compare`'
-  echo ''
-  echo '```'
-  echo "$HELP_COMPARE"
-  echo '```'
-  echo ''
-  echo '### `ironprose list-rules`'
-  echo ''
-  echo '```'
-  echo "$HELP_LIST_RULES"
-  echo '```'
-} >> skills/SKILL.md
+} >> skills/ironprose/SKILL.md
 
 # Append static sections
-cat >> skills/SKILL.md << 'FOOTER'
-
+cat >> skills/ironprose/SKILL.md << 'FOOTER'
 ## Environment Variables
 
-| Variable            | Description                      | Default                          |
-| ------------------- | -------------------------------- | -------------------------------- |
-| `IRONPROSE_API_URL` | API base URL                     | `https://prose-mcp.fly.dev`      |
-| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)           |
+| Variable            | Description                      | Default                     |
+| ------------------- | -------------------------------- | --------------------------- |
+| `IRONPROSE_API_URL` | API base URL                     | `https://prose-mcp.fly.dev` |
+| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)      |
 FOOTER
 
-echo "✅ Generated skills/SKILL.md"
+echo "✅ Generated skills/ironprose/SKILL.md"
