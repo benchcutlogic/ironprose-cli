@@ -320,7 +320,12 @@ fn print_output(value: &serde_json::Value, format: &str) {
                     let rule = d.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
                     let severity = d.get("severity").and_then(|v| v.as_str()).unwrap_or("?");
                     let message = d.get("message").and_then(|v| v.as_str()).unwrap_or("?");
-                    let line = d.get("start_line").and_then(|v| v.as_u64()).unwrap_or(0);
+                    // API returns 0-indexed line numbers; add 1 for human-readable display
+                    let line = d
+                        .get("start_line")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0)
+                        .saturating_add(1);
 
                     let source_tag = match d.get("source_type").and_then(|v| v.as_str()) {
                         Some(st) => {
