@@ -223,7 +223,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(g) = genre {
                     args["genre"] = serde_json::json!(g);
                 }
-                if let Some(l) = locale {
+                if let Some(ref l) = locale {
+                    const VALID_LOCALES: &[&str] = &[
+                        "en-us", "en_us", "en-US", "en_US", "en-gb", "en_gb", "en-GB", "en_GB",
+                        "en-any",
+                    ];
+                    if !VALID_LOCALES.contains(&l.as_str()) {
+                        eprintln!(
+                            "error: unknown locale {:?}. Valid values: en-us, en-gb, en-any (and case/separator variants)",
+                            l
+                        );
+                        std::process::exit(1);
+                    }
                     args["locale"] = serde_json::json!(l);
                 }
                 args

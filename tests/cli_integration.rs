@@ -468,6 +468,26 @@ fn test_schema_unknown_endpoint() {
         .stderr(predicate::str::contains("Unknown endpoint"));
 }
 
+// ── Locale Validation Tests ────────────────────────────────────
+
+#[test]
+fn test_analyze_invalid_locale_exits_1() {
+    cli()
+        .args(["analyze", "Some text.", "--locale", "klingon"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown locale"));
+}
+
+#[test]
+fn test_analyze_invalid_locale_shows_valid_values() {
+    cli()
+        .args(["analyze", "Some text.", "--locale", "fr-FR"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("en-us").or(predicate::str::contains("en-any")));
+}
+
 // ── Input Hardening Tests ──────────────────────────────────────
 
 #[test]
