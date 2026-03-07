@@ -58,3 +58,41 @@ jobs:
 
       - name: Clippy
         run: cargo clippy -- -D warnings
+
+  smoketest:
+    name: Smoketest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: smoketest
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: ironprose --help
+        run: ./target/release/ironprose --help
+
+      - name: ironprose --version
+        run: ./target/release/ironprose --version
+
+      - name: ironprose schema (full spec)
+        run: ./target/release/ironprose schema | head -5
+
+      - name: ironprose schema analyze
+        run: ./target/release/ironprose schema analyze | grep -q POST
+
+      - name: ironprose schema unknown (should fail)
+        run: "! ./target/release/ironprose schema nonexistent 2>&1 | grep -q 'Unknown endpoint'"
+
+      - name: Reject path traversal
+        run: "! ./target/release/ironprose analyze --file ../../etc/passwd 2>&1 | grep -q traversal"
+
+      - name: Reject absolute path
+        run: "! ./target/release/ironprose analyze --file /etc/passwd 2>&1 | grep -q Absolute"
