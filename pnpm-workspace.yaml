@@ -1,2 +1,5 @@
-ignoredBuiltDependencies:
+packages:
+  - "."
+
+onlyBuiltDependencies:
   - lefthook
