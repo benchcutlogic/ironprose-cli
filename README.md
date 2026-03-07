@@ -97,6 +97,33 @@ ironprose analyze --file draft.md --output text
 ironprose rate --rule repetition --rating helpful --diagnostic-id d-001
 ```
 
+### `--output text` stream split
+
+When `--output text` is used, the two output streams are **intentionally separate**:
+
+| Stream   | Content                               |
+| -------- | ------------------------------------- |
+| `stderr` | Diagnostics (one per line)            |
+| `stdout` | Score JSON                            |
+
+To capture **both** in a single file or variable, merge stderr into stdout:
+
+```bash
+ironprose analyze --file draft.md --output text 2>&1
+```
+
+To capture them separately:
+
+```bash
+ironprose analyze --file draft.md --output text \
+  > score.json \
+  2> diagnostics.txt
+```
+
+### Line numbers
+
+Diagnostics include `start_line` / `end_line` fields that come from the API in **0-indexed** form (line 1 of the file = `0`). The `--output text` renderer converts these to **1-indexed** line numbers for human display (`L1`, `L2`, …). Raw `--output json` output preserves the 0-indexed values as returned by the API.
+
 ## Configuration
 
 | Variable            | Description                      | Default                     |
