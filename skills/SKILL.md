@@ -1,7 +1,14 @@
 ---
 name: skills
 description: Fiction prose analysis — catch weak verbs, repetition, clichés, passive voice, and other craft issues in manuscripts
-metadata: {"openclaw": {"homepage": "https://github.com/benchcutlogic/ironprose-cli", "requires": {"bins": ["ironprose"]}}}
+metadata:
+  {
+    "openclaw":
+      {
+        "homepage": "https://github.com/benchcutlogic/ironprose-cli",
+        "requires": { "bins": ["ironprose"] },
+      },
+  }
 ---
 
 # IronProse CLI — Fiction Writing Assistant
@@ -15,9 +22,6 @@ violations, and 100+ other rules tuned for creative writing.
 ```bash
 # Install via npm (recommended)
 npx ironprose --help
-
-# Or install via cargo
-cargo install ironprose-cli
 ```
 
 ## Common Workflows
@@ -66,7 +70,7 @@ Commands:
   help        Print this message or the help of the given subcommand(s)
 
 Options:
-      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
+      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
       --api-key <API_KEY>  API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
   -h, --help               Print help
   -V, --version            Print version
@@ -87,7 +91,7 @@ Options:
       --json <JSON>                  Raw JSON payload (sent directly to the API, bypasses other flags)
       --score-only                   Only output scores (no diagnostics)
       --rules <RULES>                Only run specific rules (comma-separated)
-      --api-url <API_URL>            IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
+      --api-url <API_URL>            IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
       --severity-min <SEVERITY_MIN>  Minimum severity: error, warning, information, hint
       --api-key <API_KEY>            API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
   -o, --output <OUTPUT>              Output format: json (default), or text [default: json]
@@ -106,7 +110,7 @@ Options:
       --revised <REVISED>              Revised text (or use --revised-file)
       --original-file <ORIGINAL_FILE>  Read original from file
       --revised-file <REVISED_FILE>    Read revised from file
-      --api-url <API_URL>              IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
+      --api-url <API_URL>              IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
       --json <JSON>                    Raw JSON payload (sent directly to the API, bypasses other flags)
       --api-key <API_KEY>              API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
   -o, --output <OUTPUT>                Output format: json (default), or text [default: json]
@@ -121,14 +125,14 @@ List all available analysis rules
 Usage: ironprose list-rules [OPTIONS]
 
 Options:
-      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://prose-mcp.fly.dev]
+      --api-url <API_URL>  IronProse API base URL [env: IRONPROSE_API_URL=] [default: https://api.ironprose.com]
       --api-key <API_KEY>  API key for authenticated access (optional, free tier available) [env: IRONPROSE_API_KEY=]
   -h, --help               Print help
 ```
 
 ## Environment Variables
 
-| Variable            | Description                      | Default                          |
-| ------------------- | -------------------------------- | -------------------------------- |
-| `IRONPROSE_API_URL` | API base URL                     | `https://prose-mcp.fly.dev`      |
-| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)           |
+| Variable            | Description                      | Default                     |
+| ------------------- | -------------------------------- | --------------------------- |
+| `IRONPROSE_API_URL` | API base URL                     | `https://api.ironprose.com` |
+| `IRONPROSE_API_KEY` | API key for authenticated access | free tier (5000 words)      |
