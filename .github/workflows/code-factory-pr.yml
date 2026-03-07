@@ -1,0 +1,38 @@
+name: Code Factory
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  risk_policy_gate:
+    name: risk-policy-gate
+    uses: benchcutlogic/code-factory/.github/workflows/risk-policy-gate.yml@de301a8d7485f5319d7c34c7edfb8988ab43f549
+    with:
+      base_sha: ${{ github.event.pull_request.base.sha }}
+      head_sha: ${{ github.event.pull_request.head.sha }}
+    secrets: inherit
+
+  ci_pipeline:
+    name: CI Pipeline
+    needs: risk_policy_gate
+    uses: benchcutlogic/code-factory/.github/workflows/ci-pipeline.yml@de301a8d7485f5319d7c34c7edfb8988ab43f549
+    secrets: inherit
+
+  review_agent:
+    name: Review Agent
+    needs: risk_policy_gate
+    uses: benchcutlogic/code-factory/.github/workflows/review-agent-gate.yml@de301a8d7485f5319d7c34c7edfb8988ab43f549
+    with:
+      review_required: ${{ needs.risk_policy_gate.outputs.review_required }}
+      head_sha: ${{ github.event.pull_request.head.sha }}
+    secrets: inherit
