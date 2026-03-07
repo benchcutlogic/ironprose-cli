@@ -1,2 +1,4 @@
 /target
-Cargo.lock
+.env
+node_modules
+pnpm-lock.yaml
