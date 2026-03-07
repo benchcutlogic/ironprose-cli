@@ -45,10 +45,9 @@ jobs:
           clawhub login --token "$CLAWHUB_TOKEN"
 
       - name: Publish skills
-        working-directory: skills
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            clawhub sync --all --dry-run
+            clawhub sync --root skills --all --dry-run
           else
-            clawhub sync --all
+            clawhub sync --root skills --all
           fi
