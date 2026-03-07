@@ -1,5 +1,5 @@
 ---
-name: skills
+name: ironprose
 description: Fiction prose analysis — catch weak verbs, repetition, clichés, passive voice, and other craft issues in manuscripts
 metadata:
   {
