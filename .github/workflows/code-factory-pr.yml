@@ -16,7 +16,7 @@ permissions:
 jobs:
   risk_policy_gate:
     name: risk-policy-gate
-    uses: benchcutlogic/code-factory/.github/workflows/risk-policy-gate.yml@d8af2bdca42aa6db6ca5bb046273104af2e5dd38
+    uses: benchcutlogic/code-factory/.github/workflows/risk-policy-gate.yml@0b72401b65691444f7ac711bc7d895bfd36522ec
     with:
       base_sha: ${{ github.event.pull_request.base.sha }}
       head_sha: ${{ github.event.pull_request.head.sha }}
@@ -25,13 +25,13 @@ jobs:
   ci_pipeline:
     name: CI Pipeline
     needs: risk_policy_gate
-    uses: benchcutlogic/code-factory/.github/workflows/ci-pipeline.yml@d8af2bdca42aa6db6ca5bb046273104af2e5dd38
+    uses: benchcutlogic/code-factory/.github/workflows/ci-pipeline.yml@0b72401b65691444f7ac711bc7d895bfd36522ec
     secrets: inherit
 
   browser_evidence:
     name: Browser Evidence
     needs: risk_policy_gate
-    uses: benchcutlogic/code-factory/.github/workflows/browser-evidence.yml@d8af2bdca42aa6db6ca5bb046273104af2e5dd38
+    uses: benchcutlogic/code-factory/.github/workflows/browser-evidence.yml@0b72401b65691444f7ac711bc7d895bfd36522ec
     with:
       browser_required: ${{ needs.risk_policy_gate.outputs.browser_required }}
     secrets: inherit
@@ -39,7 +39,7 @@ jobs:
   review_agent:
     name: Review Agent
     needs: risk_policy_gate
-    uses: benchcutlogic/code-factory/.github/workflows/review-agent-gate.yml@d8af2bdca42aa6db6ca5bb046273104af2e5dd38
+    uses: benchcutlogic/code-factory/.github/workflows/review-agent-gate.yml@0b72401b65691444f7ac711bc7d895bfd36522ec
     with:
       review_required: ${{ needs.risk_policy_gate.outputs.review_required }}
       head_sha: ${{ github.event.pull_request.head.sha }}
