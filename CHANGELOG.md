@@ -1,5 +1,15 @@
 # ironprose-cli
 
+## 0.5.0
+
+### Minor Changes
+
+- e1ac7ff: feat: add --genre and --locale flags to compare subcommand (closes #38)
+
+### Patch Changes
+
+- e840636: fix: resolve $ref in schema output so agents can discover all request body parameters (closes #39)
+
 ## 0.4.0
 
 ### Minor Changes
