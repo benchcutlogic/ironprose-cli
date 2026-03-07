@@ -102,9 +102,11 @@ enum Commands {
     ///   ironprose schema compare
     ///   ironprose schema rate
     ///   ironprose schema list-rules
+    ///   ironprose schema insights
+    ///   ironprose schema export
     ///   ironprose schema          # dumps full OpenAPI spec
     Schema {
-        /// Endpoint name: analyze, compare, rate, list-rules, entitlement
+        /// Endpoint name: analyze, compare, rate, list-rules, entitlement, insights, export
         endpoint: Option<String>,
     },
 
