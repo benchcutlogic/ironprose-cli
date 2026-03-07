@@ -1,5 +1,11 @@
 # ironprose-cli
 
+## 0.5.1
+
+### Patch Changes
+
+- 0445ee8: fix: validate --locale flag client-side, reject unknown values with exit 1 (closes #37)
+
 ## 0.5.0
 
 ### Minor Changes
