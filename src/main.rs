@@ -121,6 +121,32 @@ enum Commands {
         endpoint: Option<String>,
     },
 
+    /// Get aggregate feedback insights per analyzer rule
+    ///
+    /// Returns per-rule counts of helpful, not_helpful, and false_positive
+    /// ratings, plus a precision proxy. Requires an API key.
+    Insights {
+        /// Only include ratings on or after this date (YYYY-MM-DD)
+        #[arg(long)]
+        since: Option<String>,
+
+        /// Only include ratings before this date (YYYY-MM-DD)
+        #[arg(long)]
+        until: Option<String>,
+
+        /// Filter by genre (prefix match: 'fiction' matches 'fiction:literary')
+        #[arg(long)]
+        genre: Option<String>,
+
+        /// Filter by work identifier
+        #[arg(long)]
+        work_id: Option<String>,
+
+        /// Output format: json (default), or text
+        #[arg(short, long, default_value = "json")]
+        output: String,
+    },
+
     /// Rate a diagnostic as helpful, not_helpful, or false_positive
     ///
     /// Agents: prefer --json for full API control.
@@ -242,6 +268,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
+        Commands::Insights {
+            since,
+            until,
+            genre,
+            work_id,
+            output,
+        } => {
+            let result = client
+                .call_insights(
+                    since.as_deref(),
+                    until.as_deref(),
+                    genre.as_deref(),
+                    work_id.as_deref(),
+                )
+                .await?;
+            print_output(&result, &output);
+        }
+
         Commands::Rate {
             rule,
             rating,
@@ -348,6 +392,42 @@ fn print_output(value: &serde_json::Value, format: &str) {
     match format {
         "text" => {
             if let Some(rules) = value.get("rules").and_then(|r| r.as_array()) {
+                // Insights response: items contain "total_ratings". List-rules items use "name"/"category".
+                if rules
+                    .first()
+                    .map(|r| r.get("total_ratings").is_some())
+                    .unwrap_or(false)
+                {
+                    let total = value.get("total").and_then(|t| t.as_u64()).unwrap_or(0);
+                    println!("Insights — {total} rule(s) with feedback\n");
+                    for rule in rules {
+                        let name = rule.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
+                        let helpful = rule.get("helpful").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let not_helpful = rule
+                            .get("not_helpful")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let false_pos = rule
+                            .get("false_positive")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let total_r = rule
+                            .get("total_ratings")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let precision = rule
+                            .get("precision_proxy")
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        println!(
+                            "  {name}: {total_r} rating(s)  \
+                             helpful={helpful}  not_helpful={not_helpful}  \
+                             false_positive={false_pos}  precision={precision:.2}"
+                        );
+                    }
+                    return;
+                }
+                // list-rules response: items use "name" and "category"
                 for r in rules {
                     let name = r.get("name").and_then(|v| v.as_str()).unwrap_or("?");
                     let category = r.get("category").and_then(|v| v.as_str()).unwrap_or("?");

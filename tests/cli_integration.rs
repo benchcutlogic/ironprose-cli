@@ -94,6 +94,30 @@ mod fixtures {
             "message": "Feedback recorded. Thank you!"
         })
     }
+
+    pub fn insights_response() -> serde_json::Value {
+        serde_json::json!({
+            "rules": [
+                {
+                    "rule": "repetition",
+                    "total_ratings": 10,
+                    "helpful": 7,
+                    "not_helpful": 2,
+                    "false_positive": 1,
+                    "precision_proxy": 0.875
+                },
+                {
+                    "rule": "passive_voice",
+                    "total_ratings": 5,
+                    "helpful": 3,
+                    "not_helpful": 1,
+                    "false_positive": 1,
+                    "precision_proxy": 0.75
+                }
+            ],
+            "total": 2
+        })
+    }
 }
 
 #[allow(deprecated)]
@@ -552,4 +576,74 @@ fn test_rate_missing_required_args() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("--rule"));
+}
+
+// ── Insights Tests ─────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_insights_basic() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/insights"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::insights_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args(["insights", "--api-url", &server.uri()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("repetition"))
+        .stdout(predicate::str::contains("precision_proxy"))
+        .stdout(predicate::str::contains("\"total\": 2"));
+}
+
+#[tokio::test]
+async fn test_insights_with_filters() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/insights"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::insights_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "insights",
+            "--since",
+            "2024-01-01",
+            "--until",
+            "2024-12-31",
+            "--genre",
+            "fiction",
+            "--work-id",
+            "book-a",
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("repetition"));
+}
+
+#[tokio::test]
+async fn test_insights_401_unauthorized() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/insights"))
+        .respond_with(
+            ResponseTemplate::new(401)
+                .set_body_json(serde_json::json!({"error": "Authentication required"})),
+        )
+        .mount(&server)
+        .await;
+
+    cli()
+        .args(["insights", "--api-url", &server.uri()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("401").or(predicate::str::contains("authentication")));
 }
