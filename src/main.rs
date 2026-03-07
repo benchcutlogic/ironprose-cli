@@ -526,6 +526,72 @@ fn print_output(value: &serde_json::Value, format: &str) {
                     serde_json::to_string_pretty(score).unwrap_or_default()
                 );
             }
+            // Compare response: fixed / introduced / persistent + original_score / revised_score
+            let has_compare_keys = value.get("fixed").is_some()
+                || value.get("introduced").is_some()
+                || value.get("persistent").is_some();
+            if has_compare_keys {
+                let print_diag_section = |label: &str, diags: &[serde_json::Value]| {
+                    if diags.is_empty() {
+                        eprintln!("{label}: (none)");
+                        return;
+                    }
+                    eprintln!("{label}: {} diagnostic(s)", diags.len());
+                    for d in diags {
+                        let rule = d.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
+                        let severity = d.get("severity").and_then(|v| v.as_str()).unwrap_or("?");
+                        let message = d.get("message").and_then(|v| v.as_str()).unwrap_or("?");
+                        let line = d
+                            .get("start_line")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                            .saturating_add(1);
+                        eprintln!("  [{severity}] L{line}: {message} ({rule})");
+                    }
+                };
+
+                let empty = vec![];
+                let fixed = value
+                    .get("fixed")
+                    .and_then(|v| v.as_array())
+                    .unwrap_or(&empty);
+                let introduced = value
+                    .get("introduced")
+                    .and_then(|v| v.as_array())
+                    .unwrap_or(&empty);
+                let persistent = value
+                    .get("persistent")
+                    .and_then(|v| v.as_array())
+                    .unwrap_or(&empty);
+
+                print_diag_section("Fixed", fixed);
+                print_diag_section("Introduced", introduced);
+                print_diag_section("Persistent", persistent);
+
+                if let (Some(orig), Some(rev)) =
+                    (value.get("original_score"), value.get("revised_score"))
+                {
+                    eprintln!("\nScore delta (original → revised):");
+                    if let (Some(orig_obj), Some(rev_obj)) = (orig.as_object(), rev.as_object()) {
+                        for (key, orig_val) in orig_obj {
+                            let rev_val = rev_obj.get(key);
+                            match (orig_val.as_f64(), rev_val.and_then(|v| v.as_f64())) {
+                                (Some(o), Some(r)) => {
+                                    let delta = r - o;
+                                    let sign = if delta >= 0.0 { "+" } else { "" };
+                                    eprintln!("  {key}: {o:.2} → {r:.2}  ({sign}{delta:.2})");
+                                }
+                                _ => {
+                                    eprintln!(
+                                        "  {key}: {orig_val} → {}",
+                                        rev_val.unwrap_or(&serde_json::Value::Null)
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         _ => {
             println!(

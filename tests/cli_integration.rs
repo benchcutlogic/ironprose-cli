@@ -437,6 +437,40 @@ async fn test_compare_json_passthrough() {
         .stdout(predicate::str::contains("fixed"));
 }
 
+// ── Compare Text Output Tests ──────────────────────────────────
+
+#[tokio::test]
+async fn test_compare_text_output() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/compare"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::compare_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "compare",
+            "--original",
+            "First draft.",
+            "--revised",
+            "Second draft.",
+            "--output",
+            "text",
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stderr(
+            predicate::str::contains("Fixed:")
+                .and(predicate::str::contains("Introduced:"))
+                .and(predicate::str::contains("Persistent:"))
+                .and(predicate::str::contains("Score delta")),
+        );
+}
+
 // ── Schema Introspection Tests ─────────────────────────────────
 
 #[test]
