@@ -218,7 +218,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 })
             };
 
-            let result = client.call_remote("compare", args).await?;
+            let mut result = client.call_remote("compare", args).await?;
+            dedup_compare_result(&mut result);
             print_output(&result, &output);
         }
 
@@ -277,6 +278,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+/// Deduplicate diagnostics in a compare API response.
+///
+/// The `introduced` and `fixed` arrays may contain the same diagnostic
+/// multiple times (identical `id` + char offsets). This function removes
+/// duplicates, keeping the first occurrence of each unique diagnostic
+/// identified by `(id, start_line, start_char, end_line, end_char)`.
+fn dedup_compare_result(result: &mut serde_json::Value) {
+    for key in ["introduced", "fixed"] {
+        if let Some(arr) = result.get_mut(key).and_then(|v| v.as_array_mut()) {
+            let mut seen = std::collections::HashSet::new();
+            arr.retain(|diag| {
+                let dedup_key = (
+                    diag.get("id").and_then(|v| v.as_str()).map(str::to_owned),
+                    diag.get("start_line").and_then(|v| v.as_i64()),
+                    diag.get("start_char").and_then(|v| v.as_i64()),
+                    diag.get("end_line").and_then(|v| v.as_i64()),
+                    diag.get("end_char").and_then(|v| v.as_i64()),
+                );
+                seen.insert(dedup_key)
+            });
+        }
+    }
 }
 
 /// Resolve text input from argument, file, or stdin.
@@ -364,5 +389,80 @@ fn print_output(value: &serde_json::Value, format: &str) {
                 serde_json::to_string_pretty(value).unwrap_or_default()
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_diag(id: &str, start_char: i64) -> serde_json::Value {
+        serde_json::json!({
+            "rule": "repetition",
+            "severity": "warning",
+            "message": "test",
+            "start_line": 0,
+            "start_char": start_char,
+            "end_line": 0,
+            "end_char": start_char + 4,
+            "id": id
+        })
+    }
+
+    #[test]
+    fn test_dedup_compare_result_removes_duplicates() {
+        let diag = make_diag("d-001", 4);
+        let mut result = serde_json::json!({
+            "introduced": [diag.clone(), diag.clone(), diag.clone()],
+            "fixed": [diag.clone(), diag.clone()],
+            "persistent": []
+        });
+
+        dedup_compare_result(&mut result);
+
+        let introduced = result["introduced"].as_array().unwrap();
+        let fixed = result["fixed"].as_array().unwrap();
+        assert_eq!(
+            introduced.len(),
+            1,
+            "introduced should have 1 entry after dedup"
+        );
+        assert_eq!(fixed.len(), 1, "fixed should have 1 entry after dedup");
+    }
+
+    #[test]
+    fn test_dedup_compare_result_keeps_distinct_diagnostics() {
+        let diag_a = make_diag("d-001", 4);
+        let diag_b = make_diag("d-002", 10);
+        let mut result = serde_json::json!({
+            "introduced": [diag_a.clone(), diag_b.clone(), diag_a.clone()],
+            "fixed": [],
+            "persistent": []
+        });
+
+        dedup_compare_result(&mut result);
+
+        let introduced = result["introduced"].as_array().unwrap();
+        assert_eq!(
+            introduced.len(),
+            2,
+            "two distinct diagnostics should remain"
+        );
+    }
+
+    #[test]
+    fn test_dedup_compare_result_no_op_when_no_duplicates() {
+        let diag_a = make_diag("d-001", 4);
+        let diag_b = make_diag("d-002", 8);
+        let mut result = serde_json::json!({
+            "introduced": [diag_a],
+            "fixed": [diag_b],
+            "persistent": []
+        });
+
+        dedup_compare_result(&mut result);
+
+        assert_eq!(result["introduced"].as_array().unwrap().len(), 1);
+        assert_eq!(result["fixed"].as_array().unwrap().len(), 1);
     }
 }
