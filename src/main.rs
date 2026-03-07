@@ -45,7 +45,7 @@ enum Commands {
         file: Option<String>,
 
         /// Raw JSON payload (sent directly to the API, bypasses other flags)
-        #[arg(long, conflicts_with_all = ["text", "file", "score_only", "rules", "severity_min"])]
+        #[arg(long, conflicts_with_all = ["text", "file", "score_only", "rules", "severity_min", "genre", "locale"])]
         json: Option<String>,
 
         /// Only output scores (no diagnostics)
@@ -59,6 +59,14 @@ enum Commands {
         /// Minimum severity: error, warning, information, hint
         #[arg(long)]
         severity_min: Option<String>,
+
+        /// Genre context for analysis (e.g. fiction, nonfiction, academic)
+        #[arg(long)]
+        genre: Option<String>,
+
+        /// Locale for language-specific rules (e.g. en-US, en-GB)
+        #[arg(long)]
+        locale: Option<String>,
 
         /// Output format: json (default), or text
         #[arg(short, long, default_value = "json")]
@@ -154,6 +162,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             score_only,
             rules,
             severity_min,
+            genre,
+            locale,
             output,
         } => {
             let args = if let Some(raw) = json {
@@ -172,6 +182,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 if let Some(sev) = severity_min {
                     args["severity_min"] = serde_json::json!(sev);
+                }
+                if let Some(g) = genre {
+                    args["genre"] = serde_json::json!(g);
+                }
+                if let Some(l) = locale {
+                    args["locale"] = serde_json::json!(l);
                 }
                 args
             };
