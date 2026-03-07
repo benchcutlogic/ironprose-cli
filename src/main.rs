@@ -142,7 +142,7 @@ enum Commands {
         #[arg(long)]
         work_id: Option<String>,
 
-        /// Output format: json (default)
+        /// Output format: json (default), or text
         #[arg(short, long, default_value = "json")]
         output: String,
     },
@@ -350,6 +350,42 @@ fn print_output(value: &serde_json::Value, format: &str) {
     match format {
         "text" => {
             if let Some(rules) = value.get("rules").and_then(|r| r.as_array()) {
+                // Insights response: items contain "total_ratings". List-rules items use "name"/"category".
+                if rules
+                    .first()
+                    .map(|r| r.get("total_ratings").is_some())
+                    .unwrap_or(false)
+                {
+                    let total = value.get("total").and_then(|t| t.as_u64()).unwrap_or(0);
+                    println!("Insights — {total} rule(s) with feedback\n");
+                    for rule in rules {
+                        let name = rule.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
+                        let helpful = rule.get("helpful").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let not_helpful = rule
+                            .get("not_helpful")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let false_pos = rule
+                            .get("false_positive")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let total_r = rule
+                            .get("total_ratings")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let precision = rule
+                            .get("precision_proxy")
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        println!(
+                            "  {name}: {total_r} rating(s)  \
+                             helpful={helpful}  not_helpful={not_helpful}  \
+                             false_positive={false_pos}  precision={precision:.2}"
+                        );
+                    }
+                    return;
+                }
+                // list-rules response: items use "name" and "category"
                 for r in rules {
                     let name = r.get("name").and_then(|v| v.as_str()).unwrap_or("?");
                     let category = r.get("category").and_then(|v| v.as_str()).unwrap_or("?");
