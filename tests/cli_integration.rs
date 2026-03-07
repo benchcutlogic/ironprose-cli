@@ -30,7 +30,9 @@ mod fixtures {
                 "start_char": 4,
                 "end_line": 0,
                 "end_char": 8,
-                "id": "d-001"
+                "id": "d-001",
+                "source_type": "Heuristic",
+                "confidence": 1.0
             }],
             "profile": {
                 "avg_sentence_length": 6.0,
@@ -83,6 +85,13 @@ mod fixtures {
                 { "name": "weak_verb", "category": "style" }
             ],
             "total": 3
+        })
+    }
+
+    pub fn rate_response() -> serde_json::Value {
+        serde_json::json!({
+            "status": "ok",
+            "message": "Feedback recorded. Thank you!"
         })
     }
 }
@@ -142,7 +151,10 @@ async fn test_analyze_text_output_format() {
         .stdout(predicate::str::contains("concreteness"))
         // text format outputs diagnostics to stderr
         .stderr(predicate::str::contains("[warning]"))
-        .stderr(predicate::str::contains("repetition"));
+        .stderr(predicate::str::contains("repetition"))
+        .stderr(predicate::str::contains("[Heuristic 1.00]"))
+        .stderr(predicate::str::contains("[id:d-001]"))
+        .stderr(predicate::str::contains("ironprose rate"));
 }
 
 #[tokio::test]
@@ -431,4 +443,94 @@ fn test_reject_absolute_path() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("Absolute"));
+}
+
+// ── Rate Tests ─────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_rate_basic() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/rate"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::rate_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "rate",
+            "--rule",
+            "repetition",
+            "--rating",
+            "helpful",
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ok"))
+        .stdout(predicate::str::contains("Feedback recorded"));
+}
+
+#[tokio::test]
+async fn test_rate_json_passthrough() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/rate"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::rate_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "rate",
+            "--json",
+            r#"{"rule":"repetition","rating":"false_positive","diagnostic_id":"d-001"}"#,
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ok"));
+}
+
+#[tokio::test]
+async fn test_rate_with_diagnostic_id() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/rate"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::rate_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "rate",
+            "--rule",
+            "repetition",
+            "--rating",
+            "false_positive",
+            "--diagnostic-id",
+            "d-001",
+            "--context",
+            "Intentional repetition for emphasis",
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ok"));
+}
+
+#[test]
+fn test_rate_missing_required_args() {
+    // Missing both --rule and --json should fail
+    cli()
+        .args(["rate", "--rating", "helpful"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--rule"));
 }

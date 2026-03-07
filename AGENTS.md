@@ -11,6 +11,7 @@
 | ---------------------- | ------------------------------------------- |
 | `ironprose analyze`    | Analyze prose (stdin, file, arg, or --json) |
 | `ironprose compare`    | Compare original vs revised text            |
+| `ironprose rate`       | Rate a diagnostic (feedback to engine)      |
 | `ironprose list-rules` | List all analysis rules                     |
 | `ironprose schema`     | Dump API schema for agent introspection     |
 
@@ -36,6 +37,20 @@ cat chapter.md | ironprose analyze --output json
 ironprose compare --original "First draft." --revised "Second draft." --output json
 ```
 
+### Rating Diagnostics
+
+```bash
+# Rate a diagnostic — false_positive and not_helpful ratings directly improve the engine
+ironprose rate --rule repetition --rating false_positive \
+  --diagnostic-id d-001 --context "Intentional repetition for emphasis"
+
+# Agent-first: raw JSON passthrough for full API control
+ironprose rate --json '{"rule":"repetition","rating":"not_helpful","diagnostic_id":"d-001"}'
+
+# Introspect the rate schema before constructing requests
+ironprose schema rate
+```
+
 ## Rules for Agents
 
 1. **Always use `--output json`** — never parse text output.
@@ -43,9 +58,10 @@ ironprose compare --original "First draft." --revised "Second draft." --output j
 3. **Use `ironprose schema <endpoint>`** to introspect API schemas at runtime.
 4. **Use `--json`** for raw payload passthrough when you need full API control.
 5. **Pipe large text via stdin** — `cat chapter.md | ironprose analyze --output json`
-6. **Never construct file paths with `..`** — traversal is rejected.
-7. **Never use absolute file paths** — only relative paths are allowed.
-8. **Do not pre-URL-encode** inputs — they will be double-encoded.
+6. **Rate diagnostics you disagree with** — `false_positive` and `not_helpful` ratings directly improve the engine.
+7. **Never construct file paths with `..`** — traversal is rejected.
+8. **Never use absolute file paths** — only relative paths are allowed.
+9. **Do not pre-URL-encode** inputs — they will be double-encoded.
 
 ## Build & Test
 
