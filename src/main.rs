@@ -285,18 +285,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// The `introduced` and `fixed` arrays may contain the same diagnostic
 /// multiple times (identical `id` + char offsets). This function removes
 /// duplicates, keeping the first occurrence of each unique diagnostic
-/// identified by `(id, start_line, start_char, end_line, end_char)`.
+/// identified by `(id, start_line, start_char, end_line, end_char, rule)`.
+///
+/// When `id` is `None` (the API may omit it), two different diagnostics
+/// that target the same span but have different `rule` values would
+/// otherwise be incorrectly collapsed. Including `rule` in the key ensures
+/// distinct diagnostics on the same span are preserved regardless of
+/// whether `id` is present.
 fn dedup_compare_result(result: &mut serde_json::Value) {
     for key in ["introduced", "fixed"] {
         if let Some(arr) = result.get_mut(key).and_then(|v| v.as_array_mut()) {
             let mut seen = std::collections::HashSet::new();
             arr.retain(|diag| {
+                let id = diag.get("id").and_then(|v| v.as_str()).map(str::to_owned);
+                // When `id` is absent the span alone is not sufficient to
+                // identify a unique diagnostic — include `rule` so that two
+                // findings at the same location but with different rules are
+                // not incorrectly deduplicated.
+                let rule_fallback = if id.is_none() {
+                    diag.get("rule").and_then(|v| v.as_str()).map(str::to_owned)
+                } else {
+                    None
+                };
                 let dedup_key = (
-                    diag.get("id").and_then(|v| v.as_str()).map(str::to_owned),
+                    id,
                     diag.get("start_line").and_then(|v| v.as_i64()),
                     diag.get("start_char").and_then(|v| v.as_i64()),
                     diag.get("end_line").and_then(|v| v.as_i64()),
                     diag.get("end_char").and_then(|v| v.as_i64()),
+                    rule_fallback,
                 );
                 seen.insert(dedup_key)
             });
