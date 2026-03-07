@@ -29,31 +29,46 @@ cargo install ironprose-cli
 
 ## Common Workflows
 
-### Revise a chapter draft
+### Analyze prose (always use JSON output)
 
 ```bash
-# Full analysis with human-readable output
-ironprose analyze --file chapter-07.md --output text
+# Full analysis — JSON is the only stable output format
+ironprose analyze --file chapter-07.md --output json
 
-# Focus on specific craft issues
-ironprose analyze --file chapter-07.md --rules repetition,weak_verb,passive_voice
+# Pipe from stdin
+cat draft.md | ironprose analyze --output json
 
-# Score only — quick health check before submitting
-ironprose analyze --file chapter-07.md --score-only
+# Raw JSON passthrough — zero translation loss, full API control
+ironprose analyze \
+  --json '{"text":"The dark night was very dark."}' \
+  --output json
+
+# Scores only — minimizes output tokens
+ironprose analyze --file chapter-07.md --output json --score-only
 ```
 
-### Compare drafts during revision
+### Schema introspection — discover before you call
 
 ```bash
-# Did the rewrite actually improve the prose?
-ironprose compare --original-file draft_v1.md --revised-file draft_v2.md
+ironprose schema analyze   # see request/response shapes
+ironprose schema rate      # see rating payload schema
+ironprose schema           # dump full OpenAPI spec
+```
+
+### Compare drafts
+
+```bash
+# Did the rewrite improve the prose?
+ironprose compare \
+  --original-file draft_v1.md \
+  --revised-file draft_v2.md \
+  --output json
 ```
 
 ### Pipe from editor / stdin
 
 ```bash
-# Analyze selected text from clipboard
-pbpaste | ironprose analyze --output text
+pbpaste | ironprose analyze --output json
 ```
 
 ### Rate diagnostics you disagree with
@@ -62,12 +77,16 @@ After analyzing text, rate any diagnostics that seem off. This directly
 improves the engine's calibration.
 
 ```bash
-# Flag a false positive — the engine learns from this
-ironprose rate --rule repetition --rating false_positive \
-  --diagnostic-id d-001 --context "Intentional repetition for emphasis"
+# JSON passthrough — preferred for agents
+ironprose rate \
+  --json '{"rule":"repetition","rating":"false_positive","diagnostic_id":"d-001","context":"Intentional repetition"}'
 
-# Or via raw JSON for full control
-ironprose rate --json '{"rule":"repetition","rating":"not_helpful","diagnostic_id":"d-001"}'
+# Convenience flags — for humans or simple ratings
+ironprose rate \
+  --rule repetition \
+  --rating false_positive \
+  --diagnostic-id d-001 \
+  --context "Intentional repetition for emphasis"
 
 # Introspect the rate schema first
 ironprose schema rate
