@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "ci": {
+    "commands": [
+      "cargo test --all"
+    ]
+  },
+  "browserEvidence": {
+    "requiredPaths": [],
+    "captureCommand": "",
+    "verifyCommand": ""
+  },
+  "reviewAgent": {
+    "requiredPaths": [],
+    "checkRunName": "",
+    "rerunComment": "",
+    "acceptableConclusions": [
+      "success"
+    ],
+    "timeoutMinutes": 20
+  }
+}
