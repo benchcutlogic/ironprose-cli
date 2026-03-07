@@ -73,6 +73,28 @@ pub fn validate_json_input(json: &str) -> Result<serde_json::Value, String> {
     serde_json::from_str(json).map_err(|e| format!("Invalid JSON input: {e}"))
 }
 
+/// Valid locale values accepted by the IronProse API.
+const VALID_LOCALES: &[&str] = &["en-us", "en-gb", "en-any"];
+
+/// Validate that a locale string is one of the values the API accepts.
+///
+/// Comparison is case-insensitive; the canonical form is lower-case with a
+/// hyphen separator (en-us, en-gb, en-any).  Rejects underscore variants
+/// such as `en_us` because those are silently ignored by the API and would
+/// give the agent a false sense of success.
+pub fn validate_locale(locale: &str) -> Result<(), String> {
+    let lower = locale.to_lowercase();
+    if VALID_LOCALES.contains(&lower.as_str()) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Unknown locale {:?}. Valid values: {}.",
+            locale,
+            VALID_LOCALES.join(", ")
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,5 +147,26 @@ mod tests {
     fn test_json_validation() {
         assert!(validate_json_input(r#"{"text": "hello"}"#).is_ok());
         assert!(validate_json_input("not json").is_err());
+    }
+
+    #[test]
+    fn test_locale_valid_values() {
+        assert!(validate_locale("en-us").is_ok());
+        assert!(validate_locale("en-gb").is_ok());
+        assert!(validate_locale("en-any").is_ok());
+        // Case-insensitive
+        assert!(validate_locale("en-US").is_ok());
+        assert!(validate_locale("en-GB").is_ok());
+    }
+
+    #[test]
+    fn test_locale_invalid_values() {
+        // Underscore separator must be rejected (silently ignored by API)
+        assert!(validate_locale("en_us").is_err());
+        assert!(validate_locale("en_gb").is_err());
+        // Completely unknown locales
+        assert!(validate_locale("klingon").is_err());
+        assert!(validate_locale("fr-FR").is_err());
+        assert!(validate_locale("").is_err());
     }
 }
