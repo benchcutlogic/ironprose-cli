@@ -182,6 +182,19 @@ enum Commands {
     },
 }
 
+/// Normalize a locale string to its canonical API form.
+/// Accepts case-insensitive and underscore/hyphen variants.
+/// Returns `Some("en-us")`, `Some("en-gb")`, or `Some("en-any")`, or `None` for unknown values.
+fn normalize_locale(locale: &str) -> Option<&'static str> {
+    let lower = locale.to_lowercase().replace('_', "-");
+    match lower.as_str() {
+        "en-us" => Some("en-us"),
+        "en-gb" => Some("en-gb"),
+        "en-any" => Some("en-any"),
+        _ => None,
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
@@ -223,8 +236,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(g) = genre {
                     args["genre"] = serde_json::json!(g);
                 }
-                if let Some(l) = locale {
-                    args["locale"] = serde_json::json!(l);
+                if let Some(ref l) = locale {
+                    let canonical = normalize_locale(l);
+                    match canonical {
+                        Some(c) => args["locale"] = serde_json::json!(c),
+                        None => {
+                            eprintln!(
+                                "error: unknown locale {:?}.\naccepted locales: en-us, en-gb, en-any (and case/separator variants)",
+                                l
+                            );
+                            std::process::exit(1);
+                        }
+                    }
                 }
                 args
             };
