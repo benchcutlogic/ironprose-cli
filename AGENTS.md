@@ -80,7 +80,7 @@ src/
 
 | Env Var             | CLI Flag    | Default                     | Description                     |
 | ------------------- | ----------- | --------------------------- | ------------------------------- |
-| `IRONPROSE_API_URL` | `--api-url` | `https://prose-mcp.fly.dev` | API base URL                    |
+| `IRONPROSE_API_URL` | `--api-url` | `https://api.ironprose.com` | API base URL                    |
 | `IRONPROSE_API_KEY` | `--api-key` | (none)                      | API key (free tier: 5000 words) |
 
 ## Error Handling
