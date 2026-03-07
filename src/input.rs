@@ -36,7 +36,9 @@ pub fn validate_file_path(path: &str) -> Result<(), String> {
     }
 
     // Reject absolute paths — agents should work relative to CWD
-    if p.is_absolute() {
+    // Check both platform-native absolute and Unix-style leading /
+    // (on Windows, Path::is_absolute() only detects C:\ style)
+    if p.is_absolute() || path.starts_with('/') {
         return Err(format!(
             "Absolute file paths are not allowed: {path}. Use a relative path."
         ));
