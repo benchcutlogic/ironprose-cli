@@ -57,35 +57,40 @@ npx ironprose --help
 
 # macOS/Linux
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/benchcutlogic/ironprose-cli/releases/latest/download/ironprose-cli-installer.sh | sh
+
+# Agent skills (for AI coding agents)
+npx skills install benchcutlogic/ironprose-cli
 ```
 
 ## Usage
 
 ```bash
-# Analyze a file
-ironprose analyze --file chapter-01.md
+# Analyze text (JSON output — agents should always use this)
+ironprose analyze --file chapter-01.md --output json
+cat draft.md | ironprose analyze --output json
 
-# Pipe from stdin
-cat draft.md | ironprose analyze
+# Scores only — minimizes output tokens
+ironprose analyze --file draft.md --output json --score-only
+
+# Raw JSON passthrough — zero translation loss
+ironprose analyze --json '{"text":"The dark night was very dark."}' --output json
+
+# Schema introspection — discover endpoints at runtime
+ironprose schema analyze
+ironprose schema rate
+
+# Rate diagnostics — closes the feedback loop
+ironprose rate --json '{"rule":"repetition","rating":"false_positive","diagnostic_id":"d-001"}'
+
+# Compare revisions
+ironprose compare --original-file v1.md --revised-file v2.md --output json
+
+# List all rules
+ironprose list-rules --output json
 
 # Human-readable output
 ironprose analyze --file draft.md --output text
-
-# Filter by rule or severity
-ironprose analyze --file draft.md --rules passive_voice,repetition
-ironprose analyze --file draft.md --severity-min warning
-
-# Compare revisions
-ironprose compare --original-file v1.md --revised-file v2.md
-
-# List all rules
-ironprose list-rules
-
-# Inspect API schema
-ironprose schema analyze
-
-# Rate a diagnostic (closes the feedback loop)
-ironprose rate --rule repetition --rating false_positive --diagnostic-id d-001
+ironprose rate --rule repetition --rating helpful --diagnostic-id d-001
 ```
 
 ## Configuration
