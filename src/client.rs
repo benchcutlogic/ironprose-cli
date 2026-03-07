@@ -1,6 +1,6 @@
-//! HTTP proxy to the remote IronProse API.
+//! HTTP client for the IronProse REST API.
 //!
-//! Remote tool calls are forwarded using the appropriate HTTP method:
+//! Requests are sent using the appropriate HTTP method:
 //! - `analyze`, `compare`, `rate` → `POST /api/<tool_name>` with JSON body
 //! - `list_rules` → `GET /api/rules`
 //! - `rule_doc`   → `GET /api/rules/<name>` (returns markdown)
@@ -11,14 +11,14 @@ use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-/// HTTP proxy to the remote IronProse API.
-pub struct RemoteProxy {
+/// HTTP client for the IronProse REST API.
+pub struct ApiClient {
     client: Client,
     api_base: String,
     api_key: Option<String>,
 }
 
-impl RemoteProxy {
+impl ApiClient {
     pub fn new(api_base: String, api_key: Option<String>) -> Self {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(30))

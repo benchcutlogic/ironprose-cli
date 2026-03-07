@@ -1,11 +1,11 @@
-mod error;
 #[allow(dead_code)]
-mod proxy;
+mod client;
+mod error;
 #[allow(dead_code)]
 mod types;
 
 use clap::{Parser, Subcommand};
-use proxy::RemoteProxy;
+use client::ApiClient;
 
 #[derive(Parser)]
 #[command(
@@ -89,7 +89,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    let proxy = RemoteProxy::new(cli.api_url, cli.api_key);
+    let client = ApiClient::new(cli.api_url, cli.api_key);
 
     match cli.command {
         Commands::Analyze {
@@ -113,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 args["severity_min"] = serde_json::json!(sev);
             }
 
-            let result = proxy.call_remote("analyze", args).await?;
+            let result = client.call_remote("analyze", args).await?;
             print_output(&result, &output);
         }
 
@@ -132,12 +132,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "revised": rev,
             });
 
-            let result = proxy.call_remote("compare", args).await?;
+            let result = client.call_remote("compare", args).await?;
             print_output(&result, &output);
         }
 
         Commands::ListRules => {
-            let result = proxy
+            let result = client
                 .call_remote("list_rules", serde_json::json!({}))
                 .await?;
             print_output(&result, "json");
