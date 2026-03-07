@@ -18,6 +18,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.JPOEHNELT_BOT }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -34,8 +36,8 @@ jobs:
         run: pnpm install
 
       - run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "jpoehnelt-bot"
+          git config --global user.email "jpoehnelt-bot@users.noreply.github.com"
 
       - name: Create Release Pull Request or Tag
         id: changesets
@@ -47,4 +49,4 @@ jobs:
           title: "chore: release versions"
           setupGitUser: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.JPOEHNELT_BOT }}
