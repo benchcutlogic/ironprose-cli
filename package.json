@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "changeset": "changeset",
+    "version-sync": "changeset version && ./scripts/sync-version.sh",
+    "tag-release": "./scripts/tag-release.sh"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.0"
+  }
+}
