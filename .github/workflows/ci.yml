@@ -89,10 +89,22 @@ jobs:
         run: ./target/release/ironprose schema analyze | grep -q POST
 
       - name: ironprose schema unknown (should fail)
-        run: "! ./target/release/ironprose schema nonexistent 2>&1 | grep -q 'Unknown endpoint'"
+        run: |
+          if ./target/release/ironprose schema nonexistent 2>err.txt; then
+            echo "Expected failure but got success"; exit 1
+          fi
+          grep -q 'Unknown endpoint' err.txt
 
       - name: Reject path traversal
-        run: "! ./target/release/ironprose analyze --file ../../etc/passwd 2>&1 | grep -q traversal"
+        run: |
+          if ./target/release/ironprose analyze --file ../../etc/passwd 2>err.txt; then
+            echo "Expected failure but got success"; exit 1
+          fi
+          grep -q traversal err.txt
 
       - name: Reject absolute path
-        run: "! ./target/release/ironprose analyze --file /etc/passwd 2>&1 | grep -q Absolute"
+        run: |
+          if ./target/release/ironprose analyze --file /etc/passwd 2>err.txt; then
+            echo "Expected failure but got success"; exit 1
+          fi
+          grep -q Absolute err.txt
