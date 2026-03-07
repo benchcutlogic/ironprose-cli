@@ -28,14 +28,6 @@ jobs:
     uses: benchcutlogic/code-factory/.github/workflows/ci-pipeline.yml@de301a8d7485f5319d7c34c7edfb8988ab43f549
     secrets: inherit
 
-  browser_evidence:
-    name: Browser Evidence
-    needs: risk_policy_gate
-    uses: benchcutlogic/code-factory/.github/workflows/browser-evidence.yml@de301a8d7485f5319d7c34c7edfb8988ab43f549
-    with:
-      browser_required: ${{ needs.risk_policy_gate.outputs.browser_required }}
-    secrets: inherit
-
   review_agent:
     name: Review Agent
     needs: risk_policy_gate
