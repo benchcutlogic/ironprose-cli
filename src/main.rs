@@ -92,8 +92,16 @@ enum Commands {
         revised_file: Option<String>,
 
         /// Raw JSON payload (sent directly to the API, bypasses other flags)
-        #[arg(long, conflicts_with_all = ["original", "revised", "original_file", "revised_file"])]
+        #[arg(long, conflicts_with_all = ["original", "revised", "original_file", "revised_file", "genre", "locale"])]
         json: Option<String>,
+
+        /// Genre context for comparison (e.g. fiction, nonfiction)
+        #[arg(long, help = "Genre context for comparison (e.g. fiction, nonfiction)")]
+        genre: Option<String>,
+
+        /// Locale for language-specific rules (e.g. en-US, en-GB)
+        #[arg(long, help = "Locale for language-specific rules (e.g. en-US, en-GB)")]
+        locale: Option<String>,
 
         /// Output format: json (default), or text
         #[arg(short, long, default_value = "json")]
@@ -209,6 +217,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(sev) = severity_min {
                     args["severity_min"] = serde_json::json!(sev);
                 }
+                if let Some(ref l) = locale {
+                    input::validate_locale(l)?;
+                }
                 if let Some(g) = genre {
                     args["genre"] = serde_json::json!(g);
                 }
@@ -228,6 +239,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             original_file,
             revised_file,
             json,
+            genre,
+            locale,
             output,
         } => {
             let args = if let Some(raw) = json {
@@ -238,10 +251,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 input::validate_text_input(&orig)?;
                 input::validate_text_input(&rev)?;
 
-                serde_json::json!({
+                if let Some(ref l) = locale {
+                    input::validate_locale(l)?;
+                }
+
+                let mut args = serde_json::json!({
                     "original": orig,
                     "revised": rev,
-                })
+                });
+                if let Some(g) = genre {
+                    args["genre"] = serde_json::json!(g);
+                }
+                if let Some(l) = locale {
+                    args["locale"] = serde_json::json!(l);
+                }
+                args
             };
 
             let mut result = client.call_remote("compare", args).await?;

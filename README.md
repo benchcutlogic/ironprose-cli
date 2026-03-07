@@ -89,6 +89,12 @@ ironprose rate \
 # Compare revisions
 ironprose compare --original-file v1.md --revised-file v2.md --output json
 
+# Compare with genre and locale context
+ironprose compare \
+  --original-file v1.md --revised-file v2.md \
+  --genre fiction:literary --locale en-gb \
+  --output json
+
 # List all rules
 ironprose list-rules --output json
 
