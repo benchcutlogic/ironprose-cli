@@ -1,5 +1,11 @@
 # ironprose-cli
 
+## 0.5.2
+
+### Patch Changes
+
+- 7eadc59: fix: compare --output text now shows fixed/introduced/persistent diagnostics and score delta (closes #47)
+
 ## 0.5.1
 
 ### Patch Changes
