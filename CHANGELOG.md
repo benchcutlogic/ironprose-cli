@@ -1,5 +1,14 @@
 # ironprose-cli
 
+## 2026.3.7
+
+### Changes
+
+- Switched to CalVer (YYYY.M.D) versioning scheme
+- Extensive agent-driven testing across Gutenberg corpus (Pride & Prejudice, Great Gatsby, Dorian Gray, Call of the Wild, Dubliners) — 156 diagnostics reviewed and rated
+- Filed bugs: list-rules --output flag (#23), compare duplicate diagnostics (#24), schema export inconsistency (#25), --output text stream split (#26), body_language_cliches phantom match (#50), shell quoting in --json (#51)
+- Filed enhancements: --genre/--locale CLI flags (#27), insights subcommand (#28), format awareness (#52), sentence_complexity literary threshold (#56), intensifier era awareness (#55), prop_permanence narrowing (#54)
+
 ## 0.5.2
 
 ### Patch Changes
