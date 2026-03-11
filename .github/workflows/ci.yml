@@ -108,3 +108,12 @@ jobs:
             echo "Expected failure but got success"; exit 1
           fi
           grep -q Absolute err.txt
+
+  ci:
+    if: always()
+    needs: [test, lint, smoketest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
