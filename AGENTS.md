@@ -35,6 +35,12 @@ cat chapter.md | ironprose analyze --output json
 
 # Compare drafts
 ironprose compare --original "First draft." --revised "Second draft." --output json
+
+# Generate a readable Markdown report (for sharing/archiving)
+ironprose analyze --file chapter.md --output markdown > report.md
+
+# Markdown revision report
+ironprose compare --original-file thesis.txt --revised-file current.txt --output markdown > revision.md
 ```
 
 ### Rating Diagnostics
@@ -80,6 +86,7 @@ src/
 ├── client.rs   # HTTP client for remote IronProse API
 ├── error.rs    # ApiError enum + HTTP status mapping
 ├── input.rs    # Input hardening (path validation, control char rejection)
+├── output.rs   # Output rendering (json, text, markdown)
 ├── schema.rs   # OpenAPI schema introspection (embedded spec)
 └── types.rs    # Typed API request/response structs
 ```

@@ -708,3 +708,77 @@ async fn test_insights_401_unauthorized() {
         .failure()
         .stderr(predicate::str::contains("401").or(predicate::str::contains("authentication")));
 }
+
+// ── Markdown Output Tests ─────────────────────────────────────
+
+#[tokio::test]
+async fn test_analyze_markdown_output() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/analyze"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::analyze_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "analyze",
+            "The dark night was very dark.",
+            "--output",
+            "markdown",
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::contains("# Prose Analysis")
+                .and(predicate::str::contains("## Scores"))
+                .and(predicate::str::contains("| Axis | Score |"))
+                .and(predicate::str::contains("Concreteness"))
+                .and(predicate::str::contains("## Diagnostics"))
+                .and(predicate::str::contains("### Warnings"))
+                .and(predicate::str::contains("`repetition`"))
+                .and(predicate::str::contains("**L1**"))
+                .and(predicate::str::contains("heuristic"))
+                .and(predicate::str::contains("1.00 confidence"))
+                .and(predicate::str::contains("ironprose.com")),
+        );
+}
+
+#[tokio::test]
+async fn test_compare_markdown_output() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/compare"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixtures::compare_response()))
+        .mount(&server)
+        .await;
+
+    cli()
+        .args([
+            "compare",
+            "--original",
+            "First draft.",
+            "--revised",
+            "Second draft.",
+            "--output",
+            "markdown",
+            "--api-url",
+            &server.uri(),
+        ])
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::contains("# Revision Report")
+                .and(predicate::str::contains("## Score Comparison"))
+                .and(predicate::str::contains("| Axis | Original | Revised |"))
+                .and(predicate::str::contains("## Fixed"))
+                .and(predicate::str::contains("`repetition`"))
+                .and(predicate::str::contains("## Introduced"))
+                .and(predicate::str::contains("## Persistent"))
+                .and(predicate::str::contains("ironprose.com")),
+        );
+}
