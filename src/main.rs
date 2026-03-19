@@ -2,11 +2,12 @@
 mod client;
 mod error;
 mod input;
+mod output;
 mod schema;
 #[allow(dead_code)]
 mod types;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use client::ApiClient;
 
 #[derive(Parser)]
@@ -31,6 +32,14 @@ struct Cli {
     /// API key for authenticated access (optional, free tier available)
     #[arg(long, global = true, env = "IRONPROSE_API_KEY")]
     api_key: Option<String>,
+}
+
+/// Output format for CLI commands.
+#[derive(Clone, Debug, ValueEnum)]
+enum OutputFormat {
+    Json,
+    Text,
+    Markdown,
 }
 
 #[derive(Subcommand)]
@@ -68,9 +77,9 @@ enum Commands {
         #[arg(long)]
         locale: Option<String>,
 
-        /// Output format: json (default), or text
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        /// Output format: json (default), text, or markdown
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// Compare original and revised text
@@ -103,16 +112,16 @@ enum Commands {
         #[arg(long, help = "Locale for language-specific rules (e.g. en-US, en-GB)")]
         locale: Option<String>,
 
-        /// Output format: json (default), or text
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        /// Output format: json (default), text, or markdown
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// List all available analysis rules
     ListRules {
-        /// Output format: json (default), or text
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        /// Output format: json (default), text, or markdown
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// Dump the API schema for an endpoint (agent introspection)
@@ -150,9 +159,9 @@ enum Commands {
         #[arg(long)]
         work_id: Option<String>,
 
-        /// Output format: json (default), or text
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        /// Output format: json (default), text, or markdown
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// Rate a diagnostic as helpful, not_helpful, or false_positive
@@ -253,7 +262,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             let result = client.call_remote("analyze", args).await?;
-            print_output(&result, &output);
+            output::render(&result, &output);
         }
 
         Commands::Compare {
@@ -293,14 +302,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let mut result = client.call_remote("compare", args).await?;
             dedup_compare_result(&mut result);
-            print_output(&result, &output);
+            output::render(&result, &output);
         }
 
         Commands::ListRules { output } => {
             let result = client
                 .call_remote("list_rules", serde_json::json!({}))
                 .await?;
-            print_output(&result, &output);
+            output::render(&result, &output);
         }
 
         Commands::Schema { endpoint } => {
@@ -330,7 +339,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     work_id.as_deref(),
                 )
                 .await?;
-            print_output(&result, &output);
+            output::render(&result, &output);
         }
 
         Commands::Rate {
@@ -432,174 +441,6 @@ async fn resolve_input(
         return Err("No input provided. Pass text as argument, --file, or pipe to stdin.".into());
     }
     Ok(buf)
-}
-
-/// Print output in the requested format.
-fn print_output(value: &serde_json::Value, format: &str) {
-    match format {
-        "text" => {
-            if let Some(rules) = value.get("rules").and_then(|r| r.as_array()) {
-                // Insights response: items contain "total_ratings". List-rules items use "name"/"category".
-                if rules
-                    .first()
-                    .map(|r| r.get("total_ratings").is_some())
-                    .unwrap_or(false)
-                {
-                    let total = value.get("total").and_then(|t| t.as_u64()).unwrap_or(0);
-                    println!("Insights — {total} rule(s) with feedback\n");
-                    for rule in rules {
-                        let name = rule.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
-                        let helpful = rule.get("helpful").and_then(|v| v.as_i64()).unwrap_or(0);
-                        let not_helpful = rule
-                            .get("not_helpful")
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        let false_pos = rule
-                            .get("false_positive")
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        let total_r = rule
-                            .get("total_ratings")
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        let precision = rule
-                            .get("precision_proxy")
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        println!(
-                            "  {name}: {total_r} rating(s)  \
-                             helpful={helpful}  not_helpful={not_helpful}  \
-                             false_positive={false_pos}  precision={precision:.2}"
-                        );
-                    }
-                    return;
-                }
-                // list-rules response: items use "name" and "category"
-                for r in rules {
-                    let name = r.get("name").and_then(|v| v.as_str()).unwrap_or("?");
-                    let category = r.get("category").and_then(|v| v.as_str()).unwrap_or("?");
-                    println!("{name}  [{category}]");
-                }
-                let total = rules.len();
-                eprintln!("\n{total} rule(s)");
-                return;
-            }
-            if let Some(diagnostics) = value.get("diagnostics").and_then(|d| d.as_array()) {
-                for d in diagnostics {
-                    let rule = d.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
-                    let severity = d.get("severity").and_then(|v| v.as_str()).unwrap_or("?");
-                    let message = d.get("message").and_then(|v| v.as_str()).unwrap_or("?");
-                    // API returns 0-indexed line numbers; add 1 for human-readable display
-                    let line = d
-                        .get("start_line")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0)
-                        .saturating_add(1);
-
-                    let source_tag = match d.get("source_type").and_then(|v| v.as_str()) {
-                        Some(st) => {
-                            let conf = d.get("confidence").and_then(|v| v.as_f64()).unwrap_or(1.0);
-                            format!(" [{st} {conf:.2}]")
-                        }
-                        None => String::new(),
-                    };
-
-                    let id_tag = match d.get("id").and_then(|v| v.as_str()) {
-                        Some(id) => format!(" [id:{id}]"),
-                        None => String::new(),
-                    };
-
-                    eprintln!("  [{severity}] L{line}: {message} ({rule}){source_tag}{id_tag}");
-                }
-                let count = diagnostics.len();
-                eprintln!("\n{count} diagnostic(s)");
-
-                if diagnostics.iter().any(|d| d.get("id").is_some()) {
-                    eprintln!(
-                        "\nRate diagnostics: ironprose rate --rule <rule> --rating helpful|not_helpful|false_positive --diagnostic-id <id>"
-                    );
-                }
-            }
-            if let Some(score) = value.get("score") {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(score).unwrap_or_default()
-                );
-            }
-            // Compare response: fixed / introduced / persistent + original_score / revised_score
-            let has_compare_keys = value.get("fixed").is_some()
-                || value.get("introduced").is_some()
-                || value.get("persistent").is_some();
-            if has_compare_keys {
-                let print_diag_section = |label: &str, diags: &[serde_json::Value]| {
-                    if diags.is_empty() {
-                        eprintln!("{label}: (none)");
-                        return;
-                    }
-                    eprintln!("{label}: {} diagnostic(s)", diags.len());
-                    for d in diags {
-                        let rule = d.get("rule").and_then(|v| v.as_str()).unwrap_or("?");
-                        let severity = d.get("severity").and_then(|v| v.as_str()).unwrap_or("?");
-                        let message = d.get("message").and_then(|v| v.as_str()).unwrap_or("?");
-                        let line = d
-                            .get("start_line")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0)
-                            .saturating_add(1);
-                        eprintln!("  [{severity}] L{line}: {message} ({rule})");
-                    }
-                };
-
-                let empty = vec![];
-                let fixed = value
-                    .get("fixed")
-                    .and_then(|v| v.as_array())
-                    .unwrap_or(&empty);
-                let introduced = value
-                    .get("introduced")
-                    .and_then(|v| v.as_array())
-                    .unwrap_or(&empty);
-                let persistent = value
-                    .get("persistent")
-                    .and_then(|v| v.as_array())
-                    .unwrap_or(&empty);
-
-                print_diag_section("Fixed", fixed);
-                print_diag_section("Introduced", introduced);
-                print_diag_section("Persistent", persistent);
-
-                if let (Some(orig), Some(rev)) =
-                    (value.get("original_score"), value.get("revised_score"))
-                {
-                    eprintln!("\nScore delta (original → revised):");
-                    if let (Some(orig_obj), Some(rev_obj)) = (orig.as_object(), rev.as_object()) {
-                        for (key, orig_val) in orig_obj {
-                            let rev_val = rev_obj.get(key);
-                            match (orig_val.as_f64(), rev_val.and_then(|v| v.as_f64())) {
-                                (Some(o), Some(r)) => {
-                                    let delta = r - o;
-                                    let sign = if delta >= 0.0 { "+" } else { "" };
-                                    eprintln!("  {key}: {o:.2} → {r:.2}  ({sign}{delta:.2})");
-                                }
-                                _ => {
-                                    eprintln!(
-                                        "  {key}: {orig_val} → {}",
-                                        rev_val.unwrap_or(&serde_json::Value::Null)
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        _ => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(value).unwrap_or_default()
-            );
-        }
-    }
 }
 
 #[cfg(test)]
