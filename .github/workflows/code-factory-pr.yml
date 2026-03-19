@@ -13,15 +13,20 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
-  pull-requests: read
-  checks: read
+  contents: write
+  pull-requests: write
 
 jobs:
-  review_agent:
-    name: Review Agent
-    uses: benchcutlogic/code-factory/.github/workflows/review-agent-gate.yml@main
+  resolve_outdated_comments:
+    name: Resolve Outdated Comments
+    uses: benchcutlogic/code-factory/.github/workflows/resolve-outdated-comments.yml@main
     with:
-      review_required: "true"
-      head_sha: ${{ github.event.pull_request.head.sha }}
+      pr_number: ${{ github.event.pull_request.number }}
+    secrets:
+      token: ${{ secrets.JPOEHNELT_BOT }}
+
+  auto_merge:
+    name: Auto Merge
+    uses: benchcutlogic/code-factory/.github/workflows/auto-merge.yml@main
     secrets: inherit
+
