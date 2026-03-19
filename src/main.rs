@@ -7,7 +7,7 @@ mod schema;
 #[allow(dead_code)]
 mod types;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use client::ApiClient;
 
 #[derive(Parser)]
@@ -32,6 +32,14 @@ struct Cli {
     /// API key for authenticated access (optional, free tier available)
     #[arg(long, global = true, env = "IRONPROSE_API_KEY")]
     api_key: Option<String>,
+}
+
+/// Output format for CLI commands.
+#[derive(Clone, Debug, ValueEnum)]
+enum OutputFormat {
+    Json,
+    Text,
+    Markdown,
 }
 
 #[derive(Subcommand)]
@@ -70,8 +78,8 @@ enum Commands {
         locale: Option<String>,
 
         /// Output format: json (default), text, or markdown
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// Compare original and revised text
@@ -105,15 +113,15 @@ enum Commands {
         locale: Option<String>,
 
         /// Output format: json (default), text, or markdown
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// List all available analysis rules
     ListRules {
-        /// Output format: json (default), or text
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        /// Output format: json (default), text, or markdown
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// Dump the API schema for an endpoint (agent introspection)
@@ -151,9 +159,9 @@ enum Commands {
         #[arg(long)]
         work_id: Option<String>,
 
-        /// Output format: json (default), or text
-        #[arg(short, long, default_value = "json")]
-        output: String,
+        /// Output format: json (default), text, or markdown
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        output: OutputFormat,
     },
 
     /// Rate a diagnostic as helpful, not_helpful, or false_positive

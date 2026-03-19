@@ -56,8 +56,22 @@ mod fixtures {
                 "start_line": 0, "start_char": 4,
                 "end_line": 0, "end_char": 8
             }],
-            "introduced": [],
-            "persistent": [],
+            "introduced": [{
+                "rule": "paragraph_end_weight",
+                "severity": "warning",
+                "message": "Paragraph ends on weak function word.",
+                "start_line": 6, "start_char": 0,
+                "end_line": 6, "end_char": 8,
+                "source_type": "Heuristic",
+                "confidence": 0.90
+            }],
+            "persistent": [{
+                "rule": "comma_splice",
+                "severity": "error",
+                "message": "Comma splice detected.",
+                "start_line": 1, "start_char": 10,
+                "end_line": 1, "end_char": 11
+            }],
             "original_score": {
                 "concreteness": 0.75,
                 "imagery_density": 0.62,
@@ -778,7 +792,15 @@ async fn test_compare_markdown_output() {
                 .and(predicate::str::contains("## Fixed"))
                 .and(predicate::str::contains("`repetition`"))
                 .and(predicate::str::contains("## Introduced"))
+                .and(predicate::str::contains("**L7**"))
+                .and(predicate::str::contains("`paragraph_end_weight`"))
+                .and(predicate::str::contains(
+                    "Paragraph ends on weak function word.",
+                ))
+                .and(predicate::str::contains("heuristic"))
+                .and(predicate::str::contains("0.90 confidence"))
                 .and(predicate::str::contains("## Persistent"))
+                .and(predicate::str::contains("`comma_splice`"))
                 .and(predicate::str::contains("ironprose.com")),
         );
 }

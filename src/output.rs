@@ -5,6 +5,21 @@
 
 use std::collections::BTreeMap;
 
+/// Escape API-derived text for safe interpolation into Markdown.
+///
+/// Guards against broken tables (pipes), inline code corruption (backticks),
+/// HTML injection, and multi-line break-out (newlines).
+fn escape_md(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('|', "\\|")
+        .replace('`', "\\`")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('\n', " ")
+        .replace('\r', "")
+}
+
 /// Severity ordering for grouping diagnostics (lower = more severe).
 fn severity_rank(s: &str) -> u8 {
     match s {
@@ -53,13 +68,11 @@ fn axis_label(key: &str) -> &str {
 // ── Public API ────────────────────────────────────────────────
 
 /// Render the API response in the requested format.
-///
-/// Everything except `"text"` and `"markdown"` falls through to JSON.
-pub fn render(value: &serde_json::Value, format: &str) {
+pub fn render(value: &serde_json::Value, format: &crate::OutputFormat) {
     match format {
-        "text" => render_text(value),
-        "markdown" => render_markdown(value),
-        _ => render_json(value),
+        crate::OutputFormat::Text => render_text(value),
+        crate::OutputFormat::Markdown => render_markdown(value),
+        crate::OutputFormat::Json => render_json(value),
     }
 }
 
@@ -351,7 +364,7 @@ fn render_markdown_compare(value: &serde_json::Value) {
         out.push_str("| Rule | Count |\n");
         out.push_str("|------|-------|\n");
         for (rule, count) in &counts {
-            out.push_str(&format!("| `{rule}` | {count} |\n"));
+            out.push_str(&format!("| `{}` | {count} |\n", escape_md(rule)));
         }
         out.push('\n');
     }
@@ -391,7 +404,7 @@ fn render_markdown_compare(value: &serde_json::Value) {
         out.push_str("| Rule | Count |\n");
         out.push_str("|------|-------|\n");
         for (rule, count) in &counts {
-            out.push_str(&format!("| `{rule}` | {count} |\n"));
+            out.push_str(&format!("| `{}` | {count} |\n", escape_md(rule)));
         }
         out.push('\n');
     }
@@ -417,13 +430,20 @@ fn format_diagnostic_md(out: &mut String, d: &serde_json::Value) {
         .unwrap_or(0)
         .saturating_add(1);
 
-    out.push_str(&format!("- **L{line}** `{rule}` — {message}"));
+    out.push_str(&format!(
+        "- **L{line}** `{}` — {}",
+        escape_md(rule),
+        escape_md(message)
+    ));
 
     // Telemetry metadata
     if let Some(source_type) = d.get("source_type").and_then(|v| v.as_str()) {
         let st_lower = source_type.to_lowercase();
         let conf = d.get("confidence").and_then(|v| v.as_f64()).unwrap_or(1.0);
-        out.push_str(&format!(" · {st_lower} · {conf:.2} confidence"));
+        out.push_str(&format!(
+            " · {} · {conf:.2} confidence",
+            escape_md(&st_lower)
+        ));
     }
 
     out.push('\n');
